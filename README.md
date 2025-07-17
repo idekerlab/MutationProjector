@@ -6,7 +6,7 @@ MutationProjector is a neural network that translates clinical gene panels into 
 MutationProjector require the following environmental setup:
 - GPU server with CUDA>=11 installed
 - Python >= 3.6
-- Anaconda (can be found in `https://docs.conda.io/projects/conda/en/latest/user-guide/install/`)
+- Anaconda (can be found from [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/))
 - PyTorch (ver 2.1.2 was used in the manuscript)
 - Other dependencies, use the below command:
 `conda env create -f conda-envs/env.yml`
