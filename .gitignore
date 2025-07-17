@@ -8,4 +8,4 @@ data/networks/*.cx*
 src/test.ipynb
 **/test_generate_embeddings.ipynb
 data/downstream_data/train_dataset/generate_sample_data.ipynb
-**/generate_sample_data.ipynb
+data/sample/generate_sample_data.ipynb
