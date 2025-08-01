@@ -1,5 +1,5 @@
 # MutationProjector
-MutationProjector is a neural network that translates clinical gene panels into a foundational representation of tumor subtypes. This is the first foundation model capable of predicting cancer therapeutic response and metastatic potential in cancer, in which multiple types of protein interaction graphs were incorporated into the model. 
+MutationProjector is a neural network that translates clinical gene panels into a foundational representation of tumor subtypes. This is a tumor mutation-based foundation model capable of predicting cancer therapeutic response and metastatic potential in cancer, in which multiple types of protein interaction graphs were incorporated into the model. 
 ![Screenshot](./Figures/Figure1.jpg)
 
 ## Environment set up
