@@ -27,7 +27,6 @@ Use the following links to download network. Make sure to have all the newtork f
 
 
 ## Required input files for downstream tasks
-![Screenshot](./Figures/Figure2.jpg)
 Make sure to create a folder under `/data/downstream_data/train_dataset` and/or `/data/downstream_data/eval_dataset`, dependeing on your task requirements.
 Also, make sure that you have all the tab-delimited files under the folder created above. 
 1. *mut.txt*
@@ -43,6 +42,7 @@ Example files are under `./data/downstream_data/sample` folder.
 
 
 ## Making predictions using the pre-trained MutationProjector
+![Screenshot](./Figures/Figure2.jpg)
 To make predictions for the task of your interest using the pre-trained MutationProjector, execute the following:
 1. Make sure you have all the *mut.txt*, *cna.txt*, *cnd.txt*, *covariates.txt* and *outcomes.txt* files under `/data/downstream_data/train_dataset/{your_dataset_name}` and `/data/downstream_data/eval_dataset/{your_dataset_name}`<br>
 (please change {your_dataset_name} to the desired name)<br>
