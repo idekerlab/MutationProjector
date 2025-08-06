@@ -27,6 +27,7 @@ Use the following links to download network. Make sure to have all the newtork f
 
 
 ## Required input files for downstream tasks
+![Screenshot](./Figures/Figure2.jpg)
 Make sure to create a folder under `/data/downstream_data/train_dataset` and/or `/data/downstream_data/eval_dataset`, dependeing on your task requirements.
 Also, make sure that you have all the tab-delimited files under the folder created above. 
 1. *mut.txt*
