@@ -44,7 +44,7 @@ Example files are under `./data/downstream_data/sample` folder.
 ### Codes for generating the input files for TMB, aneuploidy and mutational signatures
 All codes related to generating the input files for TMB and mutational signatures are available under `./src` folder.
 For generating aneuploidy, please use [ASCETS](https://github.com/beroukhim-lab/ascets)
-1. *calculate_TMB.R* : calculates TMB from MAF (Mutation Annotated Format) files using [Maftools](https://www.bioconductor.org/packages/release/bioc/html/maftools.html)
+1. *calculate_TMB.R* : calculates TMB from MAF (Mutation Annotation Format) files using [Maftools](https://www.bioconductor.org/packages/release/bioc/html/maftools.html)
 2. *mutation_signatures-compute_SBS.py* : compute mutation signatures from MAF files using [SigProfiler](https://cancer.sanger.ac.uk/signatures/tools/)
 3. *mutation_signatures-identify_dominant_signature.py* : compute dominant mutation signatures
 
