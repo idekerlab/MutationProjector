@@ -36,6 +36,9 @@ def transfer_learn(downstream_train, downstream_eval, out_name=None, max_depth=1
     # X (input data)
     X1 = torch.cat((rep_emb1, cov_emb1.reshape(cov_emb1.shape[0],-1)), dim=1)
     X2 = torch.cat((rep_emb2, cov_emb2.reshape(cov_emb2.shape[0],-1)), dim=1)
+    # Scale data
+    X1 = StandardScaler().fit_transform(X1)
+    X2 = StandardScaler().fit_transform(X2)
     
     # output labels
     # phenotypic outcomes
