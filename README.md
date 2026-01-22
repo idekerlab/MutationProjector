@@ -76,7 +76,7 @@ Arguments
 Name of the folder containing the downstream dataset to predict
 - `-transfer_learned_model`  
 Choose one of the following
-- `Chemotherapy`
+    - `Chemotherapy`
 
 #### 3. Output files 
 - Predicted probabilities for each tumor samples  
