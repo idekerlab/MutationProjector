@@ -61,13 +61,13 @@ To use transfer-learned random forest models for immunotherapy/chemotherapy resp
 1. Make sure you have all the *mut.txt*, *cna.txt*, *cnd.txt*, *covariates.txt* and *outcomes.txt* files under `/data/downstream_data/eval_dataset/{your_dataset_name}`  
 (please change {your_dataset_name} to the desired name)  
 2. Run the model in a GPU server by executing the following in the `/src` folder:  
-<pre><code>
+```bash
 python predict.py 
 		   -downstream_eval <downstream_dataset_name>
 		   -transfer_learned_model <Chemotherapy, Immunotherapy, metastasis_luad, tissue_of_origin_BRCA, tissue_of_origin_COADREAD, tissue_of_origin_LUAD, tissue_of_origin_LUSC>
 		   -o <output_prefix> [OPTIONAL]  
 		   -padding_idx <List of indices for missing values in covariates> [OPTIONAL]
-</code></pre>
+```
 3. Output files 
 - Predicted probabilities for each tumor samples  
 - Output file available at:  
