@@ -78,9 +78,8 @@ Arguments
 Name of the folder containing the downstream dataset to predict
 - `-transfer_learned_model`  
 Choose one of the following
-    - `Chemotherapy`  
-	for chemotherapy response prediction
-	- `Immunotherapy` for immunotherapy response prediction
+    - `Chemotherapy` (for chemotherapy response prediction)
+	- `Immunotherapy` (for immunotherapy response prediction)
 	- `metastasis_luad` for metasis prediction in lung adenocarcinoma patients
 	- `tissue_of_origin_BRCA` for predicting the probability of a recurrent/metastatic tumor originating from breast cancer
 	- `tissue_of_origin_COADREAD` for predicting colorectal cancer origin probability
