@@ -69,7 +69,7 @@ Make sure you have all the *mut.txt*, *cna.txt*, *cnd.txt*, *covariates.txt* and
 ```bash
 python predict.py 
 		   -downstream_eval 
-		   -transfer_learned_model <Chemotherapy, Immunotherapy, metastasis_luad, tissue_of_origin_BRCA, tissue_of_origin_COADREAD, tissue_of_origin_LUAD, tissue_of_origin_LUSC>
+		   -transfer_learned_model
 		   -o <output_prefix> [OPTIONAL]  
 		   -padding_idx <List of indices for missing values in covariates> [OPTIONAL]
 ```
@@ -85,6 +85,10 @@ Choose one of the following
 	- `tissue_of_origin_COADREAD` for predicting colorectal cancer origin probability
 	- `tissue_of_origin_LUAD` for predicting lung adenocarcinoma origin probability
 	- `tissue_of_origin_LUSC` for predicting lung squamous cell carcinoma origin probability
+- `-o` 
+Output file prefix (optional).
+- `--padding_idx`
+List of indices for missing values in the covariates (optional). 
 
 
 #### 3. Output files 
