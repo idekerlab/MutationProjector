@@ -56,7 +56,7 @@ For generating aneuploidy, please use [ASCETS](https://github.com/beroukhim-lab/
 ## Making predictions using the pre-trained MutationProjector
 ![Screenshot](./Figures/Figure2.jpg)
 
-### Predictions using the transfer-learned random forest models
+### (A) Predictions using the transfer-learned random forest models
 To use transfer-learned random forest models for immunotherapy/chemotherapy response, metastasis or tissue-of-origin prediction, execute the following:
 
 
@@ -70,8 +70,8 @@ Make sure you have all the *mut.txt*, *cna.txt*, *cnd.txt*, *covariates.txt* and
 python predict.py 
 		   -downstream_eval 
 		   -transfer_learned_model
-		   -o <output_prefix> [OPTIONAL]  
-		   -padding_idx <List of indices for missing values in covariates> [OPTIONAL]
+		   -o [OPTIONAL]  
+		   -padding_idx [OPTIONAL]
 ```
 Arguments  
 - `-downstream_eval`  
@@ -80,11 +80,11 @@ Name of the folder containing the downstream dataset to predict
 Choose one of the following
     - `Chemotherapy` (for chemotherapy response prediction)
 	- `Immunotherapy` (for immunotherapy response prediction)
-	- `metastasis_luad` for metasis prediction in lung adenocarcinoma patients
-	- `tissue_of_origin_BRCA` for predicting the probability of a recurrent/metastatic tumor originating from breast cancer
-	- `tissue_of_origin_COADREAD` for predicting colorectal cancer origin probability
-	- `tissue_of_origin_LUAD` for predicting lung adenocarcinoma origin probability
-	- `tissue_of_origin_LUSC` for predicting lung squamous cell carcinoma origin probability
+	- `metastasis_luad` (for metasis prediction in lung adenocarcinoma patients)
+	- `tissue_of_origin_BRCA` (for predicting the probability of a recurrent/metastatic tumor originating from breast cancer)
+	- `tissue_of_origin_COADREAD` (for predicting colorectal cancer origin probability)
+	- `tissue_of_origin_LUAD` (for predicting lung adenocarcinoma origin probability)
+	- `tissue_of_origin_LUSC` (for predicting lung squamous cell carcinoma origin probability)
 - `-o` 
 Output file prefix (optional).
 - `--padding_idx`
@@ -98,28 +98,42 @@ List of indices for missing values in the covariates (optional).
 
 
 
-### Transfer learning on your own downstream task datasets
+### (B) Transfer learning on your own downstream tasks
 To make predictions for the task of your interest using the pre-trained MutationProjector, execute the following:
-1. Make sure you have all the *mut.txt*, *cna.txt*, *cnd.txt*, *covariates.txt* and *outcomes.txt* files under `/data/downstream_data/train_dataset/{your_dataset_name}` and `/data/downstream_data/eval_dataset/{your_dataset_name}`  
-(please change {your_dataset_name} to the desired name)  
-2. Run the model in a GPU server by execute the following in the `/src/` folder:  
-<pre><code>
-python predict.py 
-		   -downstream_train <downstream_training_dataset_name> 
-		   -downstream_eval <downstrea_testing_dataset_name>
-		   -max_depth <random_forest_max_depth> [OPTIONAL] 
-		   -n_estimators <random_forest_n_estimators> [OPTIONAL] 
-		   -o <output_prefix> [OPTIONAL]  
-		   -padding_idx <List of indices for missing values in covariates> [OPTIONAL]
-</code></pre>
+#### 1. Prepare train and test datasets
+Make sure you have all the *mut.txt*, *cna.txt*, *cnd.txt*, *covariates.txt* and *outcomes.txt* files under `/data/downstream_data/train_dataset/{your_dataset_name}` and `/data/downstream_data/eval_dataset/{your_dataset_name}`  
+(please change {your_dataset_name} to the desired name)
 
-  				   
-3. Output files 
+
+#### 2. Run the model in a GPU server by execute the following in the `/src/` folder:  
+```bash
+python predict.py 
+		   -downstream_train 
+		   -downstream_eval
+		   -max_depth [OPTIONAL] 
+		   -n_estimators [OPTIONAL] 
+		   -o [OPTIONAL]  
+		   -padding_idx [OPTIONAL]
+```
+Arguments  
+- `-downstream_train`  
+Name of the folder containing the downstream dataset to train
+- `-downstream_eval`  
+Name of the folder containing the downstream dataset to test
+- `-max_depth`  
+Hyperparameter for random forest (optional).
+- `-n_estimators`
+Hyperparameter for random forest (optional).
+- `-o` 
+Output file prefix (optional).
+- `--padding_idx`
+List of indices for missing values in the covariates (optional). 
+
+
+#### 3. Output files 
 - Predicted probabilities for each tumor samples  
 - Output file available at:  
 `/prediction_results/{your_dataset_name}/TransferLearning_predictions.txt`
-
-
 
 
 ## Code used for pre-training
