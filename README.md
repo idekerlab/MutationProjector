@@ -17,7 +17,6 @@ MutationProjector require the following environmental setup:
 ## Protein interaction graphs
 Protein interaction graphs are available in `/data/networks`.  
 All of the networks used in this study are available on NDEx (Network Data Exchange).
-Use the following links to download network. Make sure to have all the newtork files under `/data/networks`.
 - DNA Damage Repair: [DDRAM](https://www.ndexbio.org/viewer/networks/748395aa-0abd-11ec-b666-0ac135e8bacf)
 - all other networks (7 networks in total): [MutationProjector NDEx](https://www.ndexbio.org/#/networkset/c84a818c-252c-11f0-9806-005056ae3c32?accesskey=503563dfc8742d58e96b755a1355978a0ca8a9d4737bfd403fc2ebabe51780e3)
 
@@ -80,7 +79,7 @@ Name of the folder containing the downstream dataset to predict
 Choose one of the following
     - `Chemotherapy` (for chemotherapy response prediction)
 	- `Immunotherapy` (for immunotherapy response prediction)
-	- `metastasis_luad` (for metasis prediction in lung adenocarcinoma patients)
+	- `metastasis_luad` (for metastasis prediction in lung adenocarcinoma patients)
 	- `tissue_of_origin_BRCA` (for predicting the probability of a recurrent/metastatic tumor originating from breast cancer)
 	- `tissue_of_origin_COADREAD` (for predicting colorectal cancer origin probability)
 	- `tissue_of_origin_LUAD` (for predicting lung adenocarcinoma origin probability)
