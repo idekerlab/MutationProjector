@@ -3,7 +3,7 @@ import numpy as np
 from collections import defaultdict
 import scipy.stats as stat
 from itertools import *
-import os, time, sys, random
+import os, time, sys, random, joblib
 from tqdm import tqdm
 import sklearn
 from sklearn.preprocessing import *
@@ -16,7 +16,7 @@ from sklearn.model_selection import *
 import torch
 from pathlib import Path
 
-def transfer_learn(downstream_train, downstream_eval, out_name=None, max_depth=10, n_estimators=100, random_state=42):
+def use_transfer_learned(downstream_eval, model_name, out_name=None):
     ####################################################
     # load data
     ####################################################
@@ -25,39 +25,30 @@ def transfer_learn(downstream_train, downstream_eval, out_name=None, max_depth=1
     
     # inputs
     # representative gene embedding
-    rep_emb1 = torch.load(f'{fi_dir}/prediction_results/{downstream_train}/rep_emb.pt').detach().cpu()
-    rep_emb2 = torch.load(f'{fi_dir}/prediction_results/{downstream_eval}/rep_emb.pt').detach().cpu()
+    rep_emb = torch.load(f'{fi_dir}/prediction_results/{downstream_eval}/rep_emb.pt').detach().cpu()
     # covariate embedding
-    cov_emb1 = torch.load(f'{fi_dir}/prediction_results/{downstream_train}/cov_emb.pt').detach().cpu()
-    cov_emb2 = torch.load(f'{fi_dir}/prediction_results/{downstream_eval}/cov_emb.pt').detach().cpu()
+    cov_emb = torch.load(f'{fi_dir}/prediction_results/{downstream_eval}/cov_emb.pt').detach().cpu()
     # X (input data)
-    X1 = torch.cat((rep_emb1.reshape(rep_emb1.shape[0],-1), cov_emb1.reshape(cov_emb1.shape[0],-1)), dim=1)
-    X2 = torch.cat((rep_emb2.reshape(rep_emb2.shape[0],-1), cov_emb2.reshape(cov_emb2.shape[0],-1)), dim=1)
+    X = torch.cat((rep_emb.reshape(rep_emb.shape[0],-1), cov_emb.reshape(cov_emb.shape[0],-1)), dim=1)
     # Scale data
-    X1 = StandardScaler().fit_transform(X1)
-    X2 = StandardScaler().fit_transform(X2)
+    X = StandardScaler().fit_transform(X)
     
     # output labels
     # phenotypic outcomes
-    pdf1 = pd.read_csv(f'{fi_dir}/data/downstream_data/train_dataset/{downstream_train}/outcomes.txt', sep='\t')
-    pdf2 = pd.read_csv(f'{fi_dir}/data/downstream_data/eval_dataset/{downstream_eval}/outcomes.txt', sep='\t')
-    # y (output label)
-    assert 'outcomes' in pdf1.columns, f"Missing 'outcomes' column in the '{fi_dir}/data/downstream_data/train_dataset/{downstream_train}/outcomes.txt' file"
-    y = pdf1['outcomes'].tolist()
+    pdf = pd.read_csv(f'{fi_dir}/data/downstream_data/eval_dataset/{downstream_eval}/outcomes.txt', sep='\t')
     
 
     
     ####################################################
-    # train data
+    # load trained model
     ####################################################
-    clf = RandomForestClassifier(random_state=random_state, n_estimators=n_estimators, max_depth=max_depth, class_weight='balanced').fit(X1, y)
-    
+    clf = joblib.load(f'{fi_dir}/pretrained_model/{model_name}_random_forest.joblib') 
     
     ####################################################
     # output prediction results
     ####################################################
-    out = pdf2.copy()
-    pred_proba = clf.predict_proba(X2)[:,-1]
+    out = pdf.copy()
+    pred_proba = clf.predict_proba(X)[:,-1]
     out['pred_proba'] = pred_proba
     fiName = 'TransferLearning_predictions.txt'
     if out_name == None:

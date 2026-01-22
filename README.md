@@ -14,7 +14,8 @@ MutationProjector require the following environmental setup:
 - To install all dependencies, use the below command:
 `conda env create -f conda-envs/env.yml`
 
-## Download protein interaction graphs
+## Protein interaction graphs
+Protein interaction graphs are available in `/data/networks`
 All of the networks used in this study are available on NDEx (Network Data Exchange).
 Use the following links to download network. Make sure to have all the newtork files under `/data/networks`.
 - DNA Damage Repair: [DDRAM](https://www.ndexbio.org/viewer/networks/748395aa-0abd-11ec-b666-0ac135e8bacf)
@@ -38,8 +39,8 @@ Also, make sure that you have all the tab-delimited files under the folder creat
 4. *covariates.txt*
 5. [optional] *outcomes.txt*<br>(if further training MutationProjector on specific task or dataset). Include two columns, `sample` and `outcomes`. `outcomes` column should contain binary outcome label (either 0 or 1). 
 
+Example files are under ./data/downstream_data/sample folder (note that this is a synthetic data).
 
-Example files are under `./data/downstream_data/sample` folder.
 
 ### Codes for generating the input files for TMB, aneuploidy and mutational signatures
 All codes related to generating the input files for TMB and mutational signatures are available under `./src` folder.
@@ -52,28 +53,52 @@ For generating aneuploidy, please use [ASCETS](https://github.com/beroukhim-lab/
 
 ## Making predictions using the pre-trained MutationProjector
 ![Screenshot](./Figures/Figure2.jpg)
+
+### Predictions using the transfer-learned random forest models
+To use transfer-learned random forest models for immunotherapy/chemotherapy response, metastasis or tissue-of-origin prediction, execute the following:
+1. Make sure you have all the *mut.txt*, *cna.txt*, *cnd.txt*, *covariates.txt* and *outcomes.txt* files under `/data/downstream_data/eval_dataset/{your_dataset_name}`<br>
+(please change {your_dataset_name} to the desired name)<br>
+2. Run the model in a GPU server by executing the following in the `/src` folder:<br>
+<pre><code>
+python predict.py 
+		   -downstream_eval <downstream_dataset_name>
+		   -transfer_learned_model <Chemotherapy, Immunotherapy, metastasis_luad, tissue_of_origin_BRCA, tissue_of_origin_COADREAD, tissue_of_origin_LUAD, tissue_of_origin_LUSC>
+		   -o <output_prefix> [OPTIONAL]  
+		   -padding_idx <List of indices for missing values in covariates> [OPTIONAL]
+</code></pre>
+3. Output files 
+- Predicted probabilities for each tumor samples<br>
+- Output file available at:<br>
+`/prediction_results/{your_dataset_name}/TransferLearning_predictions.txt`
+
+
+
+### Transfer learning on your own downstream task datasets
 To make predictions for the task of your interest using the pre-trained MutationProjector, execute the following:
 1. Make sure you have all the *mut.txt*, *cna.txt*, *cnd.txt*, *covariates.txt* and *outcomes.txt* files under `/data/downstream_data/train_dataset/{your_dataset_name}` and `/data/downstream_data/eval_dataset/{your_dataset_name}`<br>
 (please change {your_dataset_name} to the desired name)<br>
 2. Run the model in a GPU server by execute the following in the `/src/` folder:<br>
-
 <pre><code>
 python predict.py 
-		   -downstream_train [name of the downstream dataset to additionally train] 
-		   -downstream_eval [name of the downstream dataset to predict] 
-		   -max_depth [max depth for downstream random forest model] [OPTIONAL] 
-		   -n_estimators [number of estimators for downstream random forest model] [OPTIONAL] 
-		   -o [file output prefix] [OPTIONAL]  
+		   -downstream_train <downstream_training_dataset_name> 
+		   -downstream_eval <downstrea_testing_dataset_name>
+		   -max_depth <random_forest_max_depth> [OPTIONAL] 
+		   -n_estimators <random_forest_n_estimators> [OPTIONAL] 
+		   -o <output_prefix> [OPTIONAL]  
+		   -padding_idx <List of indices for missing values in covariates> [OPTIONAL]
 </code></pre>
 
 <br>				   
 3. Output files 
 - Predicted probabilities for each tumor samples<br>
 - Output file available at:<br>
-`/data/downstream_data/eval_dataset/{your_dataset_name}/TransferLearning_predictions.txt`
+`/prediction_results/{your_dataset_name}/TransferLearning_predictions.txt`
+
+
+
 
 ## Code used for pre-training
-MutationProjector is pre-trained using self-supervised learning and weakly supervised learning. 
+MutationProjector is pre-trained using self-supervised learning and supervised learning. 
 The code for pre-training is `/src/pretrain.py`.
 
 

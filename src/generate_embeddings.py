@@ -30,7 +30,7 @@ from GATv2_attention_weights import *
 def embed_from_pretrained(pretrained_model, dataset,
                           dataset_type='train_dataset',
                           geneset='MSKIMPACT468', 
-                          networks='GRN;E3;phosphorylation;physical_ppi;SL;DDRAM;STRING;PCNET', 
+                          networks='GRN;E3;phosphorylation;physical_ppi;genetic_interaction;DDRAM;STRING;PCNET', 
                           padding_idx=[],
                           split_train_data=0,
                           num_features=10,
@@ -50,12 +50,10 @@ def embed_from_pretrained(pretrained_model, dataset,
                           batch_size = 64,
                           weight_decay = 0.0001
                          ):
-    print(f'Generating embeddings from a pretrained model, {time.ctime()}')
     
     # load genes
     gset = geneset 
     input_genes = load_genes(gset=gset)
-    print(f'Geneset name: {gset}\nNumber of genes: {len(input_genes)}')
 
     #####################################
     # load data
@@ -68,14 +66,13 @@ def embed_from_pretrained(pretrained_model, dataset,
     # genomic
     mdf = pd.read_csv(f'{fi_dir}/data/downstream_data/{dataset_type}/{dataset}/mut.txt', sep='\t')
     cna = pd.read_csv(f'{fi_dir}/data/downstream_data/{dataset_type}/{dataset}/cna.txt', sep='\t')
-    cnd = pd.read_csv(f'{fi_dir}/data/downstream_data{dataset_type}/{dataset}/cnd.txt', sep='\t')
+    cnd = pd.read_csv(f'{fi_dir}/data/downstream_data/{dataset_type}/{dataset}/cnd.txt', sep='\t')
     merged = merge_data(mdf, cna, cnd, use_cancer_types=False)
     # sData
     tmp_sData = pd.read_csv(f'{fi_dir}/data/downstream_data/{dataset_type}/{dataset}/covariates.txt', sep='\t')
     # gData, sData, pData
     gData[dataset] = merged[0] 
     sData[dataset] = tmp_sData
-    print(dataset, gData[dataset].shape)
     #####################################
 
     
@@ -87,13 +84,10 @@ def embed_from_pretrained(pretrained_model, dataset,
     #####################################
     networks = networks.split(';')
     network_edges = []
-    print(f'load networks, {time.ctime()}')
-    for n_idx in tqdm(range(len(networks))):
+    for n_idx in range(len(networks)):
         network = networks[n_idx]
-        edges = load_network().return_edges(network, input_genes)
-        edges = torch.from_numpy(edges).type(torch.long).T
+        edges = load_network().return_edges(network)
         network_edges.append(edges)
-    print(f'done loading networks, {time.ctime()}')    
     #####################################
 
 
@@ -127,13 +121,16 @@ def embed_from_pretrained(pretrained_model, dataset,
 
     ## Generate embeddings
     # padding
-    padding_info = {}
+    padding_info = {'IMvigor210':list(np.arange(1, 9)),
+                'mel_dfci_2019':[1],
+                'mixed_allen_2018':[1]}
     if len(padding_idx) > 0:
         padding_info[dataset] = padding_idx
     # embeddings
     Gene_emb = torch.tensor([]).cuda(cuda_device)
     Rep_emb = torch.tensor([]).cuda(cuda_device)
     Cov_emb = torch.tensor([]).cuda(cuda_device)
+    Final_emb = torch.tensor([]).cuda(cuda_device)
     # X2_test
     X_test = gData[dataset]
     X_special = torch.tensor(sData[dataset].set_index('sample').values)
@@ -161,10 +158,9 @@ def embed_from_pretrained(pretrained_model, dataset,
     Xs_split = split_array(X_special, 64)
 
     # compute gene embeddings
-    print(f'generating embeddings, {time.ctime()}')
     pretrained_model.eval()
     with torch.no_grad():
-        for idx in tqdm(range(len(X_split))):
+        for idx in range(len(X_split)):
             X1, X2 = X_split[idx], Xs_split[idx]
             # train_emb
             pred_risk1 = pretrained_model(X1, X2, test_geneset=False, return_attention_weights=True, apply_paddings=apply_paddings)
@@ -173,10 +169,12 @@ def embed_from_pretrained(pretrained_model, dataset,
             Gene_emb = torch.concatenate((Gene_emb, gene_emb), dim=0)
             Rep_emb = torch.concatenate((Rep_emb, rep_emb), dim=0)
             Cov_emb = torch.concatenate((Cov_emb, cov_emb), dim=0)
+            Final_emb = torch.concatenate((Final_emb, out_concat_layer), dim=0)
 
     # write results
-    torch.save(Gene_emb, f'{fi_dir}/data/downstream_data/{dataset_type}/{dataset}/gene_emb.pt')
-    torch.save(Rep_emb, f'{fi_dir}/data/downstream_data/{dataset_type}/{dataset}/rep_emb.pt')
-    torch.save(Cov_emb, f'{fi_dir}/data/downstream_data/{dataset_type}/{dataset}/cov_emb.pt')
-    print(f'done generating embeddings, {time.ctime()}')
+    os.makedirs(f"{fi_dir}/prediction_results/{dataset}", exist_ok=True)
+    torch.save(Gene_emb, f'{fi_dir}/prediction_results/{dataset}/gene_emb.pt')
+    torch.save(Rep_emb, f'{fi_dir}/prediction_results/{dataset}/rep_emb.pt')
+    torch.save(Cov_emb, f'{fi_dir}/prediction_results/{dataset}/cov_emb.pt')
+    torch.save(Final_emb, f'{fi_dir}/prediction_results/{dataset}/final_layer_emb.pt')
     #####################################
