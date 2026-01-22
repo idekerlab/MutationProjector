@@ -15,7 +15,7 @@ MutationProjector require the following environmental setup:
 `conda env create -f conda-envs/env.yml`
 
 ## Protein interaction graphs
-Protein interaction graphs are available in `/data/networks`
+Protein interaction graphs are available in `/data/networks`.  
 All of the networks used in this study are available on NDEx (Network Data Exchange).
 Use the following links to download network. Make sure to have all the newtork files under `/data/networks`.
 - DNA Damage Repair: [DDRAM](https://www.ndexbio.org/viewer/networks/748395aa-0abd-11ec-b666-0ac135e8bacf)
