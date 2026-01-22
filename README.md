@@ -37,7 +37,7 @@ Also, make sure that you have all the tab-delimited files under the folder creat
 2. *cna.txt*
 3. *cnd.txt*
 4. *covariates.txt*
-5. [optional] *outcomes.txt*  
+5. *outcomes.txt* [OPTIONAL]  
 
 Provide `outcomes.txt` file if trying to transfer learn on specific task or dataset. Include two columns, `sample` and `outcomes`. `outcomes` column should contain binary outcome label (either 0 or 1). 
 
@@ -68,6 +68,11 @@ python predict.py
 		   -o <output_prefix> [OPTIONAL]  
 		   -padding_idx <List of indices for missing values in covariates> [OPTIONAL]
 ```
+Arguments  
+- `-downstream_eval`  
+Name of the folder containing the downstream dataset to predict
+
+
 3. Output files 
 - Predicted probabilities for each tumor samples  
 - Output file available at:  
