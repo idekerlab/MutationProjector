@@ -66,7 +66,7 @@ Make sure you have all the *mut.txt*, *cna.txt*, *cnd.txt*, *covariates.txt* and
 #### 2. Run the model in a GPU server by executing the following in the `/src` folder:  
 ```bash
 python predict.py 
-		   -downstream_eval <downstream_dataset_name>
+		   -downstream_eval 
 		   -transfer_learned_model <Chemotherapy, Immunotherapy, metastasis_luad, tissue_of_origin_BRCA, tissue_of_origin_COADREAD, tissue_of_origin_LUAD, tissue_of_origin_LUSC>
 		   -o <output_prefix> [OPTIONAL]  
 		   -padding_idx <List of indices for missing values in covariates> [OPTIONAL]
@@ -74,7 +74,9 @@ python predict.py
 Arguments  
 - `-downstream_eval`  
 Name of the folder containing the downstream dataset to predict
-
+- `-transfer_learned_model`  
+Choose one of the following
+- `Chemotherapy`
 
 #### 3. Output files 
 - Predicted probabilities for each tumor samples  
