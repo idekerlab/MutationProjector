@@ -58,8 +58,11 @@ For generating aneuploidy, please use [ASCETS](https://github.com/beroukhim-lab/
 
 ### Predictions using the transfer-learned random forest models
 To use transfer-learned random forest models for immunotherapy/chemotherapy response, metastasis or tissue-of-origin prediction, execute the following:
-#### 1. Make sure you have all the *mut.txt*, *cna.txt*, *cnd.txt*, *covariates.txt* and *outcomes.txt* files under `/data/downstream_data/eval_dataset/{your_dataset_name}`  
-(please change {your_dataset_name} to the desired name)  
+#### 1. Prepare test dataset  
+Make sure you have all the *mut.txt*, *cna.txt*, *cnd.txt*, *covariates.txt* and *outcomes.txt* files under `/data/downstream_data/eval_dataset/{your_dataset_name}`  
+(please change {your_dataset_name} to the desired name)
+
+
 #### 2. Run the model in a GPU server by executing the following in the `/src` folder:  
 ```bash
 python predict.py 
@@ -73,7 +76,7 @@ Arguments
 Name of the folder containing the downstream dataset to predict
 
 
-3. Output files 
+#### 3. Output files 
 - Predicted probabilities for each tumor samples  
 - Output file available at:  
 `/prediction_results/{your_dataset_name}/TransferLearning_predictions.txt`
