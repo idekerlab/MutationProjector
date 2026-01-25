@@ -33,18 +33,15 @@ def transfer_learn(downstream_train, downstream_eval, out_name=None, max_depth=1
     # X (input data)
     X1 = torch.cat((rep_emb1.reshape(rep_emb1.shape[0],-1), cov_emb1.reshape(cov_emb1.shape[0],-1)), dim=1)
     X2 = torch.cat((rep_emb2.reshape(rep_emb2.shape[0],-1), cov_emb2.reshape(cov_emb2.shape[0],-1)), dim=1)
+    # phenotypic outcomes
+    pdf1 = pd.read_csv(f'{fi_dir}/data/downstream_data/train_dataset/{downstream_train}/outcomes.txt', sep='\t')
+    assert 'outcomes' in pdf1.columns, f"Missing 'outcomes' column in the '{fi_dir}/data/downstream_data/train_dataset/{downstream_train}/outcomes.txt' file"
+    y_idx = [idx for idx in range(pdf1.shape[0]) if not pdf1['outcomes'].tolist()[idx] == 'na']
+    X1 = X1[y_idx]
+    y = pdf1['outcomes'].to_numpy()[y_idx].astype(int)
     # Scale data
     X1 = StandardScaler().fit_transform(X1)
     X2 = StandardScaler().fit_transform(X2)
-    
-    # output labels
-    # phenotypic outcomes
-    pdf1 = pd.read_csv(f'{fi_dir}/data/downstream_data/train_dataset/{downstream_train}/outcomes.txt', sep='\t')
-    pdf2 = pd.read_csv(f'{fi_dir}/data/downstream_data/eval_dataset/{downstream_eval}/outcomes.txt', sep='\t')
-    # y (output label)
-    assert 'outcomes' in pdf1.columns, f"Missing 'outcomes' column in the '{fi_dir}/data/downstream_data/train_dataset/{downstream_train}/outcomes.txt' file"
-    y = pdf1['outcomes'].tolist()
-    
 
     
     ####################################################
@@ -56,8 +53,11 @@ def transfer_learn(downstream_train, downstream_eval, out_name=None, max_depth=1
     ####################################################
     # output prediction results
     ####################################################
+    pdf2 = pd.read_csv(f'{fi_dir}/data/downstream_data/eval_dataset/{downstream_eval}/covariates.txt', sep='\t')
+    pdf2 = pd.DataFrame(data=pdf2, columns=['sample'])
     out = pdf2.copy()
     pred_proba = clf.predict_proba(X2)[:,-1]
+    #out = pd.DataFrame({'pred_proba':pred_proba})
     out['pred_proba'] = pred_proba
     fiName = 'TransferLearning_predictions.txt'
     if out_name == None:

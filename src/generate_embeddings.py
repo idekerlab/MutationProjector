@@ -154,8 +154,8 @@ def embed_from_pretrained(pretrained_model, dataset,
         apply_paddings = padding_info[dataset]        
         
     # split into minibatches 
-    X_split = split_array(X2_test, 64)
-    Xs_split = split_array(X_special, 64)
+    X_split = split_array(X2_test, batch_size)
+    Xs_split = split_array(X_special, batch_size)
 
     # compute gene embeddings
     pretrained_model.eval()

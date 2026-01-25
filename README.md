@@ -55,8 +55,8 @@ For generating aneuploidy, please use [ASCETS](https://github.com/beroukhim-lab/
 ## Making predictions using the pre-trained MutationProjector
 ![Screenshot](./Figures/Figure2.jpg)
 
-### (A) Predictions using the transfer-learned random forest models
-To use transfer-learned random forest models for immunotherapy/chemotherapy response, metastasis or tissue-of-origin prediction, execute the following:
+### (A) Predictions using the transfer-learned models
+To use transfer-learned models for immunotherapy/chemotherapy response, metastasis or tissue-of-origin prediction, execute the following:
 
 
 #### 1. Prepare test dataset  
