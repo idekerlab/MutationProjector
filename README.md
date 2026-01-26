@@ -143,6 +143,8 @@ The code for pre-training is `/src/pretrain.py`.
 ## Cite
 Please cite the **MutationProjector** paper if using this repo:
 ### 1. `MutationProjector`  
+- *bioRxiv*: Kong, JungHo, et al. "Translating clinical gene sequencing into a foundational representation of tumor subtype." bioRxiv (2025): 2025-09.  
+
 If using protein interaction graphs or other tools, please cite the papers below:  
 ### 2. `Networks`
 - *BioPlex*: Huttlin, E. L. et al. Dual proteome-scale networks reveal cell-specific remodeling of the human interactome. Cell 184, 3022–3040.e28 (2021)
