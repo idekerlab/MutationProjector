@@ -135,6 +135,26 @@ List of indices for missing values in the covariates (optional).
 `/prediction_results/{your_dataset_name}/TransferLearning_predictions.txt`
 
 
+## Generating embeddings using the pre-trained MutationProjector
+#### 1. Run the model in a GPU server by executing the following in the `/src` folder:  
+```bash
+python generate_embeddings.py 
+		   -dataset
+		   -dataset_type
+```
+Arguments  
+- `-dataset`  
+Name of the dataset
+- `-dataset_type`  
+Choose one of the following
+    - `train_dataset` (for chemotherapy response prediction)
+	- `eval_dataset` (for immunotherapy response prediction)
+
+#### 2. Output files 
+- Model embeddings available at:  
+`/prediction_results/{your_dataset_name}`
+
+
 ## Code used for pre-training
 MutationProjector is pre-trained using self-supervised learning and supervised learning. 
 The code for pre-training is `/src/pretrain.py`.

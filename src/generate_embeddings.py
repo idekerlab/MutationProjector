@@ -12,6 +12,7 @@ from itertools import *
 import os, time, sys, random
 from tqdm import tqdm
 from pathlib import Path
+import argparse
 
 import torch
 import torch.nn as nn
@@ -25,6 +26,26 @@ from import_network import *
 from nn_training_functions import *
 from MutationProjector_nn import *
 from GATv2_attention_weights import *
+
+def gen_embedding():
+    #############################################
+    ## User inputs
+    #############################################
+    parser = argparse.ArgumentParser(description='Generate MutationProjector embeddings')
+    # arguments for generating embeddings
+    parser.add_argument('-dataset', help='name of the dataset', type=str, default='na')
+    parser.add_argument('-dataset_type', help='dataset type ("train_dataset" or "eval_dataset")', type=str, default='na')
+    # args
+    args = parser.parse_args()
+    
+    #############################################
+    ## Generate embeddings
+    #############################################
+    print(f'Generating embeddings for "{args.dataset}", {time.ctime()}')
+    embed_from_pretrained(pretrained_model='pretrained_model.pth', dataset=args.dataset, dataset_type=args.dataset_type)
+    print(f'Done, results available at "../prediction_results/{args.dataset}", {time.ctime()}')
+    
+    
 
 
 def embed_from_pretrained(pretrained_model, dataset,
@@ -178,3 +199,7 @@ def embed_from_pretrained(pretrained_model, dataset,
     torch.save(Cov_emb, f'{fi_dir}/prediction_results/{dataset}/cov_emb.pt')
     torch.save(Final_emb, f'{fi_dir}/prediction_results/{dataset}/final_layer_emb.pt')
     #####################################
+
+    
+if __name__ == '__main__':
+    gen_embedding()
