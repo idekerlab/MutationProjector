@@ -40,7 +40,7 @@ Also, make sure that you have all the tab-delimited files under the folder creat
 
 Provide `outcomes.txt` file if trying to transfer learn on specific task or dataset. Include two columns, `sample` and `outcomes`. `outcomes` column should contain binary outcome label (either 0 or 1). 
 
-Example files are under ./data/downstream_data/sample folder (note that this is a synthetic data).
+Example files are under ./data/downstream_data/train_dataset/sample folder (note that this is a synthetic data).
 
 
 ### Codes for generating the input files for TMB, aneuploidy and mutational signatures
