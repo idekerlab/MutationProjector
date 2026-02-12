@@ -52,7 +52,7 @@ For generating aneuploidy, please use [ASCETS](https://github.com/beroukhim-lab/
 
 
 
-## :gear: Making predictions using the pre-trained MutationProjector
+## :package: Making predictions using the pre-trained MutationProjector
 ![Screenshot](./Figures/Figure2.jpg)
 
 ### :arrow_forward: (A) Predictions using the transfer-learned models
@@ -135,7 +135,7 @@ List of indices for missing values in the covariates (optional).
 `/prediction_results/{your_dataset_name}/TransferLearning_predictions.txt`
 
 
-## :gear: Generating embeddings using the pre-trained MutationProjector
+## :package: Generating embeddings using the pre-trained MutationProjector
 #### 1. Run the model in a GPU server by executing the following in the `/src` folder:  
 ```bash
 python generate_embeddings.py 
