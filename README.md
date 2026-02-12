@@ -38,7 +38,7 @@ Also, make sure that you have all the tab-delimited files under the folder creat
 4. *covariates.txt*
 5. *outcomes.txt*  
 
-Provide `outcomes.txt` file if trying to transfer learn on specific task or dataset. Include two columns, `sample` and `outcomes` [OPTIONAL]. `outcomes` column should contain binary outcome label (either 0 or 1). 
+For `outcomes.txt` file, include two columns, `sample` and `outcomes` (if trying to transfer learn on specific task). `outcomes` column should contain binary outcome label (either 0 or 1). 
 
 Example files are under `./data/downstream_data/train_dataset/sample folder` (note that this is a synthetic data).
 
