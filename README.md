@@ -11,8 +11,8 @@ MutationProjector require the following environmental setup:
 - Python >= 3.6
 - Anaconda: [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
 - PyTorch (ver 2.1.2 was used in the manuscript)
-- To install all dependencies, use the below command:
-`conda env create -f conda-envs/env.yml`
+- To install all dependencies, use the following command:
+`conda env create -f ./conda-envs/env.yml`
 
 ## :rocket: Protein interaction graphs
 Protein interaction graphs are available in `/data/networks`.  
