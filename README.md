@@ -29,7 +29,7 @@ All of the networks used in this study are available on NDEx (Network Data Excha
 
 
 
-## :rocket: Required input files for downstream tasks
+## :file_folder: Required input files for downstream tasks
 Make sure to create a folder under `/data/downstream_data/train_dataset` and/or `/data/downstream_data/eval_dataset`, dependeing on your task requirements.
 Also, make sure that you have all the tab-delimited files under the folder created above. 
 1. *mut.txt*
