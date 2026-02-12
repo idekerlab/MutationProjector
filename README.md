@@ -5,7 +5,7 @@ MutationProjector is a neural network that translates clinical gene panels into 
 To pre-train MutationProjector, we leveraged large-scale genomic alteration data, histopathology images and multiple molecular interaction networks. Simplified overview of the approach is visualized below:
 ![Screenshot](./Figures/Figure1.jpg)
 
-## Environment set up
+## :rocket: Environment set up
 MutationProjector require the following environmental setup:
 - GPU server with CUDA>=11 installed
 - Python >= 3.6
