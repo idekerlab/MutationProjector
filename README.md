@@ -1,7 +1,7 @@
 # MutationProjector
 MutationProjector is a neural network that translates clinical gene panels into a foundational representation of tumors. This is a tumor mutation-based foundation model capable of predicting cancer therapeutic response and metastasis, in which multiple types of molecular interaction networks were incorporated into the model. 
 
-## Pre-training MutationProjector
+## :compass: Pre-training MutationProjector
 To pre-train MutationProjector, we leveraged large-scale genomic alteration data, histopathology images and multiple molecular interaction networks. Simplified overview of the approach is visualized below:
 ![Screenshot](./Figures/Figure1.jpg)
 
@@ -14,14 +14,14 @@ MutationProjector require the following environmental setup:
 - To install all dependencies, use the below command:
 `conda env create -f conda-envs/env.yml`
 
-## Protein interaction graphs
+## :rocket: Protein interaction graphs
 Protein interaction graphs are available in `/data/networks`.  
 All of the networks used in this study are available on NDEx (Network Data Exchange).
 - DNA Damage Repair: [DDRAM](https://www.ndexbio.org/viewer/networks/748395aa-0abd-11ec-b666-0ac135e8bacf)
 - all other networks (7 networks in total): [MutationProjector NDEx](https://www.ndexbio.org/#/networkset/c84a818c-252c-11f0-9806-005056ae3c32?accesskey=503563dfc8742d58e96b755a1355978a0ca8a9d4737bfd403fc2ebabe51780e3)
 
 
-## Other requirements
+## :rocket: Other requirements
 - Calculate tumor mutation burden: use [Maftools](https://www.bioconductor.org/packages/release/bioc/html/maftools.html)
 - Calculate aneuploidy: use [ASCETS](https://github.com/beroukhim-lab/ascets)
 - Calculate mutational signatures from targeted gene panels: use [MESiCA](https://pmc.ncbi.nlm.nih.gov/articles/PMC11228799/)
@@ -29,7 +29,7 @@ All of the networks used in this study are available on NDEx (Network Data Excha
 
 
 
-## Required input files for downstream tasks
+## :rocket: Required input files for downstream tasks
 Make sure to create a folder under `/data/downstream_data/train_dataset` and/or `/data/downstream_data/eval_dataset`, dependeing on your task requirements.
 Also, make sure that you have all the tab-delimited files under the folder created above. 
 1. *mut.txt*
@@ -43,7 +43,7 @@ Provide `outcomes.txt` file if trying to transfer learn on specific task or data
 Example files are under `./data/downstream_data/train_dataset/sample folder` (note that this is a synthetic data).
 
 
-### Codes for generating the input files for TMB, aneuploidy and mutational signatures
+### :gear: Codes for generating the input files for TMB, aneuploidy and mutational signatures
 All codes related to generating the input files for TMB and mutational signatures are available under `./src` folder.
 For generating aneuploidy, please use [ASCETS](https://github.com/beroukhim-lab/ascets)
 1. *calculate_TMB.R* : calculates TMB from MAF (Mutation Annotation Format) files using [Maftools](https://www.bioconductor.org/packages/release/bioc/html/maftools.html)
@@ -52,7 +52,7 @@ For generating aneuploidy, please use [ASCETS](https://github.com/beroukhim-lab/
 
 
 
-## Making predictions using the pre-trained MutationProjector
+## :fire: Making predictions using the pre-trained MutationProjector
 ![Screenshot](./Figures/Figure2.jpg)
 
 ### (A) Predictions using the transfer-learned models
@@ -135,7 +135,7 @@ List of indices for missing values in the covariates (optional).
 `/prediction_results/{your_dataset_name}/TransferLearning_predictions.txt`
 
 
-## Generating embeddings using the pre-trained MutationProjector
+## :gear: Generating embeddings using the pre-trained MutationProjector
 #### 1. Run the model in a GPU server by executing the following in the `/src` folder:  
 ```bash
 python generate_embeddings.py 
@@ -155,12 +155,12 @@ Choose one of the following
 `/prediction_results/{your_dataset_name}`
 
 
-## Code used for pre-training
+## :gear: Code used for pre-training
 MutationProjector is pre-trained using self-supervised learning and supervised learning. 
 The code for pre-training is `/src/pretrain.py`.
 
 
-## Cite
+## :pushpin: Cite
 Please cite the **MutationProjector** paper if using this repo:
 ### 1. `MutationProjector`  
 - *bioRxiv*: Kong, JungHo, et al. "Translating clinical gene sequencing into a foundational representation of tumor subtype." bioRxiv (2025): 2025-09.  
