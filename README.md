@@ -52,10 +52,10 @@ For generating aneuploidy, please use [ASCETS](https://github.com/beroukhim-lab/
 
 
 
-## :fire: Making predictions using the pre-trained MutationProjector
+## :gear: Making predictions using the pre-trained MutationProjector
 ![Screenshot](./Figures/Figure2.jpg)
 
-### (A) Predictions using the transfer-learned models
+### :arrow_forward: (A) Predictions using the transfer-learned models
 To use transfer-learned models for immunotherapy/chemotherapy response, metastasis or tissue-of-origin prediction, execute the following:
 
 
@@ -97,7 +97,7 @@ List of indices for missing values in the covariates (optional).
 
 
 
-### (B) Transfer learning on your own downstream tasks
+### :fire: (B) Transfer learning on your own downstream tasks
 To make predictions for the task of your interest using the pre-trained MutationProjector, execute the following:
 #### 1. Prepare train and test datasets
 Make sure you have all the *mut.txt*, *cna.txt*, *cnd.txt*, *covariates.txt* and *outcomes.txt* files under `/data/downstream_data/train_dataset/{your_dataset_name}` and `/data/downstream_data/eval_dataset/{your_dataset_name}`  
