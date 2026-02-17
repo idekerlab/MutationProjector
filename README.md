@@ -147,8 +147,8 @@ Arguments
 Name of the dataset
 - `-dataset_type`  
 Choose one of the following
-    - `train_dataset` (for chemotherapy response prediction)
-	- `eval_dataset` (for immunotherapy response prediction)
+    - `train_dataset`
+	- `eval_dataset`
 
 #### 2. Output files 
 - Model embeddings available at:  

@@ -8,6 +8,7 @@
 # Ignore test runs
 src/test.ipynb
 **/test_generate_embeddings.ipynb
+**/test_attention.ipynb
 
 # Ignore actual datasets
 data/downstream_data/luad_mskcc_2023_met_organotropism/

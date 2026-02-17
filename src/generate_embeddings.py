@@ -162,7 +162,7 @@ def embed_from_pretrained(pretrained_model, dataset,
     # num_bins
     num_bins2 = np.append([num_bins,num_bins], [2]*7)
     # output sizes
-    output_sizes = [num_input_features, num_features, 3]
+    output_sizes = [3, 10, 3]
 
     ## load model
     tmp = torch.load('%s/%s'%(dir_pretrained, model_name))
