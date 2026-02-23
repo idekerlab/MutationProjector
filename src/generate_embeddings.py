@@ -25,7 +25,6 @@ from nn_training_functions import *
 from import_network import *
 from nn_training_functions import *
 from MutationProjector_nn import *
-from GATv2_attention_weights import *
 
 def gen_embedding():
     #############################################

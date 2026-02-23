@@ -40,7 +40,7 @@ Also, make sure that you have all the tab-delimited files under the folder creat
 
 For `outcomes.txt` file, include two columns, `sample` and `outcomes` (if trying to transfer learn on a specific task). `outcomes` column should contain binary outcome label (either 0 or 1). 
 
-Example files are under `./data/downstream_data/train_dataset/sample folder` (note that this is a synthetic data).
+Example files are under `./data/downstream_data/train_dataset/sample` and `./data/downstream_data/eval_dataset/test_sample` folders (note that these are synthetic data).
 
 
 ### :gear: Codes for generating the input files for TMB, aneuploidy and mutational signatures
@@ -69,7 +69,6 @@ Make sure you have all the *mut.txt*, *cna.txt*, *cnd.txt*, *covariates.txt* and
 python predict.py 
 		   -downstream_eval 
 		   -transfer_learned_model
-		   -o [OPTIONAL]  
 		   -padding_idx [OPTIONAL]
 ```
 Arguments  
@@ -84,8 +83,6 @@ Choose one of the following
 	- `tissue_of_origin_COADREAD` (for predicting colorectal cancer origin probability)
 	- `tissue_of_origin_LUAD` (for predicting lung adenocarcinoma origin probability)
 	- `tissue_of_origin_LUSC` (for predicting lung squamous cell carcinoma origin probability)
-- `-o` 
-Output file prefix (optional).
 - `--padding_idx`
 List of indices for missing values in the covariates (optional). 
 
@@ -110,8 +107,7 @@ python predict.py
 		   -downstream_train 
 		   -downstream_eval
 		   -max_depth [OPTIONAL] 
-		   -n_estimators [OPTIONAL] 
-		   -o [OPTIONAL]  
+		   -n_estimators [OPTIONAL]  
 		   -padding_idx [OPTIONAL]
 ```
 Arguments  
@@ -123,8 +119,6 @@ Name of the folder containing the downstream dataset to test
 Hyperparameter for random forest (optional).
 - `-n_estimators`
 Hyperparameter for random forest (optional).
-- `-o` 
-Output file prefix (optional).
 - `--padding_idx`
 List of indices for missing values in the covariates (optional). 
 
@@ -152,6 +146,26 @@ Choose one of the following
 
 #### 2. Output files 
 - Model embeddings available at:  
+`/prediction_results/{your_dataset_name}`
+
+
+## :package: Computing feature importance
+#### 1. Run the model in a GPU server by executing the following in the `/src` folder:  
+```bash
+python compute_importance.py
+		   -dataset
+		   -dataset_type
+```
+Arguments  
+- `-dataset`  
+Name of the dataset
+- `-dataset_type`  
+Choose one of the following
+    - `train_dataset`
+	- `eval_dataset`
+
+#### 2. Output files 
+- Feature importance results available at:  
 `/prediction_results/{your_dataset_name}`
 
 
