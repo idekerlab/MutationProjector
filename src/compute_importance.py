@@ -19,7 +19,7 @@ def compute_importance_():
     parser = argparse.ArgumentParser(description='Compute importance')
     # arguments for generating embeddings
     parser.add_argument('-dataset', help='name of the dataset', type=str, default='na')
-    parser.add_argument('-dataset_type', help='dataset type ("train_dataset" or "eval_dataset")', type=str, default='na')
+    parser.add_argument('-dataset_type', help='dataset type ("train_dataset" or "eval_dataset")', type=str, default='eval_dataset')
     # args
     args = parser.parse_args()
 

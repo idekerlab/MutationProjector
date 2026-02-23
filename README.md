@@ -150,19 +150,14 @@ Choose one of the following
 
 
 ## :package: Computing feature importance
-#### 1. Run the model in a GPU server by executing the following in the `/src` folder:  
+#### 1. After making predictions, run the model in a GPU server by executing the following in the `/src` folder:  
 ```bash
 python compute_importance.py
 		   -dataset
-		   -dataset_type
 ```
 Arguments  
 - `-dataset`  
 Name of the dataset
-- `-dataset_type`  
-Choose one of the following
-    - `train_dataset`
-	- `eval_dataset`
 
 #### 2. Output files 
 - Feature importance results available at:  
