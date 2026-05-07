@@ -17,7 +17,8 @@ def load_genes(gset='MSKIMPACT468', convert_IDs=True):
             gset = 'MSK-IMPACT468'
         df = pd.read_csv(f'{fi_dir}/data/gene/%s.txt'%gset, sep='\t')
         geneList = sorted(list(set(df['gene'].tolist())))
-    
+
+        
     # convert alias gene IDs to primary gene IDs
     if convert_IDs == True:
         geneList = convert_geneIDs(geneList)

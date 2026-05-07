@@ -16,26 +16,51 @@ from sklearn.model_selection import *
 import torch
 from pathlib import Path
 
-def transfer_learn(downstream_train, downstream_eval, out_name=None, max_depth=10, n_estimators=100, random_state=42):
+def transfer_learn(downstream_train,
+                   downstream_eval,
+                   out_name     = None,
+                   max_depth    = 10,
+                   n_estimators = 100,
+                   random_state = 42,
+                   path_train   = None,
+                   path_test    = None,                   
+                  ):
     ####################################################
     # load data
     ####################################################
     # fi_dir
     fi_dir = Path().resolve().parent
+    PATH_TRAIN, PATH_TEST = path_train, path_test
+    if path_train == None:
+        PATH_TRAIN  = f'{fi_dir}/prediction_results/{downstream_train}'
+    else:
+        PATH_TRAIN = f"{path_train}/prediction_results"
+    if path_test == None:
+        PATH_TEST = f'{fi_dir}/prediction_results/{downstream_eval}'
+    else:
+        PATH_TEST = f"{path_test}/prediction_results"
+    assert os.path.exists(PATH_TRAIN), f"Path {PATH_TRAIN} (train data) not found"
+    assert os.path.exists(PATH_TEST), f"Path {PATH_TEST} (test data) not found"
+    
     
     # inputs
     # representative gene embedding
-    rep_emb1 = torch.load(f'{fi_dir}/prediction_results/{downstream_train}/rep_emb.pt').detach().cpu()
-    rep_emb2 = torch.load(f'{fi_dir}/prediction_results/{downstream_eval}/rep_emb.pt').detach().cpu()
+    rep_emb1 = torch.load(f'{PATH_TRAIN}/rep_emb.pt').detach().cpu()
+    rep_emb2 = torch.load(f'{PATH_TEST}/rep_emb.pt').detach().cpu()
     # covariate embedding
-    cov_emb1 = torch.load(f'{fi_dir}/prediction_results/{downstream_train}/cov_emb.pt').detach().cpu()
-    cov_emb2 = torch.load(f'{fi_dir}/prediction_results/{downstream_eval}/cov_emb.pt').detach().cpu()
+    cov_emb1 = torch.load(f'{PATH_TRAIN}/cov_emb.pt').detach().cpu()
+    cov_emb2 = torch.load(f'{PATH_TEST}/cov_emb.pt').detach().cpu()
     # X (input data)
     X1 = torch.cat((rep_emb1.reshape(rep_emb1.shape[0],-1), cov_emb1.reshape(cov_emb1.shape[0],-1)), dim=1)
     X2 = torch.cat((rep_emb2.reshape(rep_emb2.shape[0],-1), cov_emb2.reshape(cov_emb2.shape[0],-1)), dim=1)
     # phenotypic outcomes
-    pdf1 = pd.read_csv(f'{fi_dir}/data/downstream_data/train_dataset/{downstream_train}/outcomes.txt', sep='\t')
-    assert 'outcomes' in pdf1.columns, f"Missing 'outcomes' column in the '{fi_dir}/data/downstream_data/train_dataset/{downstream_train}/outcomes.txt' file"
+    try:
+        pdf1 = pd.read_csv(f'{PATH_TRAIN}/outcomes.txt', sep='\t')
+    except:
+        if path_train:
+            pdf1 = pd.read_csv(f"{path_train}/outcomes.txt", sep='\t')
+        else:
+            pdf1 = pd.read_csv(f"{fi_dir}/data/downstream_data/train_dataset/{downstream_train}/outcomes.txt", sep='\t')
     y_idx = [idx for idx in range(pdf1.shape[0]) if not pdf1['outcomes'].tolist()[idx] == 'na']
     X1 = X1[y_idx]
     y = pdf1['outcomes'].to_numpy()[y_idx].astype(int)
@@ -53,19 +78,31 @@ def transfer_learn(downstream_train, downstream_eval, out_name=None, max_depth=1
     ####################################################
     # output prediction results
     ####################################################
-    pdf2 = pd.read_csv(f'{fi_dir}/data/downstream_data/eval_dataset/{downstream_eval}/covariates.txt', sep='\t')
+    try:
+        pdf2 = pd.read_csv(f'{PATH_TEST}/covariates.txt', sep='\t')
+    except:
+        if path_test:
+            pdf2 = pd.read_csv(f"{path_test}/outcomes.txt", sep='\t')
+        else:
+            pdf2 = pd.read_csv(f"{fi_dir}/data/downstream_data/eval_dataset/{downstream_eval}/outcomes.txt", sep='\t')
     pdf2 = pd.DataFrame(data=pdf2, columns=['sample'])
     out = pdf2.copy()
     pred_proba = clf.predict_proba(X2)[:,-1]
-    #out = pd.DataFrame({'pred_proba':pred_proba})
     out['pred_proba'] = pred_proba
+    
+    # fiName
     fiName = 'TransferLearning_predictions.txt'
-    if out_name == None:
-        out.to_csv(f'{fi_dir}/prediction_results/{downstream_eval}/TransferLearning_predictions.txt', sep='\t', index=False)
-    elif type(out_name) == str:
-        fiName = out_name
-        out.to_csv(f'{fi_dir}/prediction_results/{downstream_eval}/{out_name}.txt', sep='\t', index=False)
-    else:
-        raise TypeError("Provide correct outcome file name for 'out_name' parameter")
+    if out_name:
+        fiName = f"{out_name}.txt"
+    
+    # out_dir
+    out_dir = f'{fi_dir}/prediction_results/{downstream_eval}'
+    if path_test:
+        os.makedirs(os.path.normpath(f"{path_test}/prediction_results"), exist_ok=True)
+        out_dir = os.path.normpath(f"{path_test}/prediction_results")
+    
+    # write results
+    out.to_csv(f"{out_dir}/{fiName}", sep="\t", index=False)
     print(f'Finished, {time.ctime()}')
-    print(f"Prediction results available at : {fi_dir}/prediction_results/{downstream_eval}/{fiName}")
+    print(f"Prediction results available at : {out_dir}/{fiName}")
+    

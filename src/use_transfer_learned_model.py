@@ -16,18 +16,29 @@ from sklearn.model_selection import *
 import torch
 from pathlib import Path
 
-def use_transfer_learned(downstream_eval, model_name, out_name=None):
+def use_transfer_learned(downstream_eval, 
+                         model_name, 
+                         out_name  = None,
+                         path_test = None,
+                        ):
     ####################################################
     # load data
     ####################################################
     # fi_dir
     fi_dir = Path().resolve().parent
+    if path_test:
+        PATH_TEST = f"{path_test}/prediction_results"
+        DATA_TEST = path_test
+    else:
+        PATH_TEST = f"{fi_dir}/prediction_results/{downstream_eval}"
+        DATA_TEST = f"{fi_dir}/data/downstream_data/eval_dataset/{downstream_eval}"
+
     
     # inputs
     # representative gene embedding
-    rep_emb = torch.load(f'{fi_dir}/prediction_results/{downstream_eval}/rep_emb.pt').detach().cpu()
+    rep_emb = torch.load(f'{PATH_TEST}/rep_emb.pt').detach().cpu()
     # covariate embedding
-    cov_emb = torch.load(f'{fi_dir}/prediction_results/{downstream_eval}/cov_emb.pt').detach().cpu()
+    cov_emb = torch.load(f'{PATH_TEST}/cov_emb.pt').detach().cpu()
     # X (input data)
     X = torch.cat((rep_emb.reshape(rep_emb.shape[0],-1), cov_emb.reshape(cov_emb.shape[0],-1)), dim=1)
     # Scale data
@@ -35,7 +46,7 @@ def use_transfer_learned(downstream_eval, model_name, out_name=None):
     
     # output labels
     # phenotypic outcomes
-    pdf = pd.read_csv(f'{fi_dir}/data/downstream_data/eval_dataset/{downstream_eval}/outcomes.txt', sep='\t')
+    pdf = pd.read_csv(f'{DATA_TEST}/outcomes.txt', sep='\t')
     
 
     
@@ -50,13 +61,20 @@ def use_transfer_learned(downstream_eval, model_name, out_name=None):
     out = pdf.copy()
     pred_proba = clf.predict_proba(X)[:,-1]
     out['pred_proba'] = pred_proba
+    
+    # file name
     fiName = 'TransferLearning_predictions.txt'
-    if out_name == None:
-        out.to_csv(f'{fi_dir}/prediction_results/{downstream_eval}/TransferLearning_predictions.txt', sep='\t', index=False)
-    elif type(out_name) == str:
-        fiName = out_name
-        out.to_csv(f'{fi_dir}/prediction_results/{downstream_eval}/{out_name}.txt', sep='\t', index=False)
-    else:
-        raise TypeError("Provide correct outcome file name for 'out_name' parameter")
+    if out_name:
+        fiName = f"{out_name}.txt"
+    
+    # write results
+    out.to_csv(f"{PATH_TEST}/{fiName}", sep='\t', index=False)
+    # if out_name == None:
+    #     out.to_csv(f'{fi_dir}/prediction_results/{downstream_eval}/TransferLearning_predictions.txt', sep='\t', index=False)
+    # elif type(out_name) == str:
+    #     fiName = out_name
+    #     out.to_csv(f'{fi_dir}/prediction_results/{downstream_eval}/{out_name}.txt', sep='\t', index=False)
+    # else:
+    #     raise TypeError("Provide correct outcome file name for 'out_name' parameter")
     print(f'Finished, {time.ctime()}')
-    print(f"Prediction results available at : {fi_dir}/prediction_results/{downstream_eval}/{fiName}")
+    print(f"Prediction results available at : {PATH_TEST}/{fiName}")
