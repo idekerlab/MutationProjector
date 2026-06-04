@@ -10,64 +10,73 @@ def predict_using_MutationProjector():
     #############################################
     parser = argparse.ArgumentParser(description='Use a pretrained MutationProjector for downstream tasks')
     # arguments for generating embeddings
-    parser.add_argument('-pretrained_model', help='name of the pretrained model (.pth file)', type=str, default='pretrained_model.pth')
     parser.add_argument('-downstream_train', help='name of the downstream dataset to additionally train. Ignored if using transfer learned model', type=str, default='na')
     parser.add_argument('-transfer_learned_model', help="use transfer learned model. Options include: 'Chemotherapy', 'Immunotherapy', 'metastasis_luad', 'tissue_of_origin_BRCA', 'tissue_of_origin_COADREAD', 'tissue_of_origin_LUAD', 'tissue_of_origin_LUSC'.", type=str, default='na')
     parser.add_argument('-downstream_eval', help='name of the downstream dataset to predict', type=str)
-    parser.add_argument('-geneset', help='name of the cancer gene panel', type=str, default='MSKIMPACT468')
-    parser.add_argument('-networks', help='list of networks', type=str, default='GRN;E3;phosphorylation;physical_ppi;genetic_interaction;DDRAM;STRING;PCNET')
     parser.add_argument('-padding_idx', help='List of indices for missing values in covariates', nargs='*', default=[], type=int)
-    parser.add_argument('-split_train_data', help='do a train/test split for cross validation', type=int, default=0)
-    parser.add_argument('-num_features', help='size of the feature embeddings', type=int, default=10)
-    parser.add_argument('-num_GATblock', help='number of GAT encoders', type=int, default=2)
-    parser.add_argument('-dff', help='size of the feed-forward layer embeddings', type=int, default=10)
-    parser.add_argument('-use_rep', help='use representative embeddings for the gene embeddings after GAT encoders', type=int, default=1)
-    parser.add_argument('-use_pooling', help='use pooling for the gene embeddings after GAT encoders', type=int, default=0)
-    parser.add_argument('-use_gradclip', help='use gradient clipping', type=int, default=0)
-    parser.add_argument('-use_covariates', help='use covariates', type=int, default=1)
-    parser.add_argument('-num_bins', help='number of bins for TMB and aneuploidy', type=int, default=5)
-    parser.add_argument('-epoch', help='epoch used during pre-training', type=int, default=100)
     parser.add_argument('-cuda_device', help='cuda device', type=int, default=0)
-    parser.add_argument('-lr', help='learning rate', type=float, default=0.001)
-    parser.add_argument('-dropout_p', help='dropout probability', type=float, default=0.1)
-    parser.add_argument('-num_heads', help='number of heads per network', type=int, default=1)
-    parser.add_argument('-mask_percentage', help='percentage to mask', type=float, default=0)
-    parser.add_argument('-batch_size', help='batch size for generating embeddings using pre-trained model', type=int, default=64)
-    parser.add_argument('-weight_decay', help='weight decay', type=float, default=0.0001)
     # arguments for downstream task
     parser.add_argument('-max_depth', help='max_depth for random forest', type=int, default=10)
     parser.add_argument('-n_estimators', help='n_estimators for random forest', type=int, default=100)
     parser.add_argument('-random_state', help='random_state for Reproducibility', type=int, default=42)
     # output file
     parser.add_argument('-o', help='name for the output prediction result file', type=str, default=None)
+    # optional arguments (path to inputs/outputs)
+    parser.add_argument('-path_train', help='[optional] path to the folder containing training data. Will override <downstream_train>.', default=None)
+    parser.add_argument('-path_test', help='[optional] path to the folder containing test data. Will override <downtream_eval>.', default=None)
+
     # args
     args = parser.parse_args()
 
     print(f'Started Running MutationProjector, {time.ctime()}')
     
+
+    ## inputs
+    pretrained_model = "pretrained_model.pth"
+    geneset          = "MSKIMPACT468"
+    networks         = "GRN;E3;phosphorylation;physical_ppi;genetic_interaction;DDRAM;STRING;PCNET"
+    split_train_data = 0
+    num_features     = 10
+    num_GATblock     = 2 
+    dff              = 10
+    use_rep          = 1
+    use_pooling      = 0
+    use_gradclip     = 0
+    use_covariates   = 1
+    num_bins         = 5
+    epoch            = 100
+    lr               = 0.001
+    dropout_p        = 0
+    num_heads        = 1
+    mask_percentage  = 0
+    batch_size       = 64
+    weight_decay     = 0.0001
+
+
     #############################################
     ## generate embeddings
     #############################################
     # downstream train
     if args.transfer_learned_model == 'na':
-        assert args.downstream_train != 'na', "provide 'downstream_train' info"
-        embed_from_pretrained(args.pretrained_model, args.downstream_train, 'train_dataset', args.geneset, args.networks, args.padding_idx, args.split_train_data, args.num_features, args.num_GATblock, args.dff, args.use_rep, args.use_pooling, args.use_gradclip, args.use_covariates, args.num_bins, args.epoch, args.cuda_device, args.lr, args.dropout_p, args.num_heads, args.mask_percentage, args.batch_size, args.weight_decay)
+        assert (args.downstream_train != 'na') or (args.path_train != None), "provide 'downstream_train' or 'path_train' info"
+        embed_from_pretrained(pretrained_model, args.downstream_train, 'train_dataset', geneset, networks, args.padding_idx, split_train_data, num_features, num_GATblock, dff, use_rep, use_pooling, use_gradclip, use_covariates, num_bins, epoch, args.cuda_device, lr, dropout_p, num_heads, mask_percentage, batch_size, weight_decay, args.path_train)
     # use transfer learned model
     else:
         avail_options = ['Chemotherapy', 'Immunotherapy', 'metastasis_luad', 'tissue_of_origin_BRCA', 'tissue_of_origin_COADREAD', 'tissue_of_origin_LUAD', 'tissue_of_origin_LUSC']
         assert args.transfer_learned_model in avail_options, "'transfer_learned_model' should be one of the following: 'Chemotherapy', 'Immunotherapy', 'metastasis_luad', 'tissue_of_origin_BRCA', 'tissue_of_origin_COADREAD', 'tissue_of_origin_LUAD', 'tissue_of_origin_LUSC'"
         
     # downstream eval
-    embed_from_pretrained(args.pretrained_model, args.downstream_eval, 'eval_dataset', args.geneset, args.networks, args.padding_idx, args.split_train_data, args.num_features, args.num_GATblock, args.dff, args.use_rep, args.use_pooling, args.use_gradclip, args.use_covariates, args.num_bins, args.epoch, args.cuda_device, args.lr, args.dropout_p, args.num_heads, args.mask_percentage, args.batch_size, args.weight_decay)
+    assert (args.downstream_eval != 'na') or (args.path_test != None), "provide 'downstream_eval' or 'path_test' info"
+    embed_from_pretrained(pretrained_model, args.downstream_eval, 'eval_dataset', geneset, networks, args.padding_idx, split_train_data, num_features, num_GATblock, dff, use_rep, use_pooling, use_gradclip, use_covariates, num_bins, epoch, args.cuda_device, lr, dropout_p, num_heads, mask_percentage, batch_size, weight_decay, args.path_test)
     
     
     #############################################
     ## make predictions
     #############################################
     if args.transfer_learned_model == 'na':
-        transfer_learn(args.downstream_train, args.downstream_eval, out_name=args.o, max_depth=args.max_depth, n_estimators=args.n_estimators, random_state=args.random_state)
+        transfer_learn(args.downstream_train, args.downstream_eval, out_name=args.o, max_depth=args.max_depth, n_estimators=args.n_estimators, random_state=args.random_state, path_train=args.path_train, path_test=args.path_test)
     else:
-        use_transfer_learned(args.downstream_eval, args.transfer_learned_model, out_name=args.o)
+        use_transfer_learned(args.downstream_eval, args.transfer_learned_model, out_name=args.o, path_test=args.path_test)
 
 
 if __name__ == '__main__':

@@ -68,11 +68,12 @@ def embed_from_pretrained(pretrained_model, dataset,
                           num_heads=1,
                           mask_percentage=0,
                           batch_size = 64,
-                          weight_decay = 0.0001
+                          weight_decay = 0.0001,
+                          path_dataset=None,
                          ):
     
     # load genes
-    gset = geneset 
+    gset = geneset
     input_genes = load_genes(gset=gset)
 
     #####################################
@@ -80,16 +81,23 @@ def embed_from_pretrained(pretrained_model, dataset,
     #####################################
     ## fi_dir
     fi_dir = Path().resolve().parent
+    if path_dataset == None:
+        PATH_DATA = f'{fi_dir}/data/downstream_data/{dataset_type}/{dataset}'
+    else:
+        PATH_DATA = path_dataset
+    if os.path.exists(PATH_DATA) == False:
+        print(f"Path {PATH_DATA} not found")
+        
     ## genomic data
     gData, sData, pData = {}, {}, {}
     # load data
     # genomic
-    mdf = pd.read_csv(f'{fi_dir}/data/downstream_data/{dataset_type}/{dataset}/mut.txt', sep='\t')
-    cna = pd.read_csv(f'{fi_dir}/data/downstream_data/{dataset_type}/{dataset}/cna.txt', sep='\t')
-    cnd = pd.read_csv(f'{fi_dir}/data/downstream_data/{dataset_type}/{dataset}/cnd.txt', sep='\t')
+    mdf = pd.read_csv(f'{PATH_DATA}/mut.txt', sep='\t')
+    cna = pd.read_csv(f'{PATH_DATA}/cna.txt', sep='\t')
+    cnd = pd.read_csv(f'{PATH_DATA}/cnd.txt', sep='\t')
     merged = merge_data(mdf, cna, cnd, use_cancer_types=False)
     # sData
-    tmp_sData = pd.read_csv(f'{fi_dir}/data/downstream_data/{dataset_type}/{dataset}/covariates.txt', sep='\t')
+    tmp_sData = pd.read_csv(f'{PATH_DATA}/covariates.txt', sep='\t')
     # gData, sData, pData
     gData[dataset] = merged[0] 
     sData[dataset] = tmp_sData
@@ -192,11 +200,15 @@ def embed_from_pretrained(pretrained_model, dataset,
             Final_emb = torch.concatenate((Final_emb, out_concat_layer), dim=0)
 
     # write results
-    os.makedirs(f"{fi_dir}/prediction_results/{dataset}", exist_ok=True)
-    torch.save(Gene_emb, f'{fi_dir}/prediction_results/{dataset}/gene_emb.pt')
-    torch.save(Rep_emb, f'{fi_dir}/prediction_results/{dataset}/rep_emb.pt')
-    torch.save(Cov_emb, f'{fi_dir}/prediction_results/{dataset}/cov_emb.pt')
-    torch.save(Final_emb, f'{fi_dir}/prediction_results/{dataset}/final_layer_emb.pt')
+    out_path = f"{fi_dir}/prediction_results/{dataset}"
+    if path_dataset:
+        out_path = f"{path_dataset}/prediction_results"
+        
+    os.makedirs(out_path, exist_ok=True)
+    torch.save(Gene_emb, f'{out_path}/gene_emb.pt')
+    torch.save(Rep_emb, f'{out_path}/rep_emb.pt')
+    torch.save(Cov_emb, f'{out_path}/cov_emb.pt')
+    torch.save(Final_emb, f'{out_path}/final_layer_emb.pt')
     #####################################
 
     
