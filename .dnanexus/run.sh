@@ -1,7 +1,9 @@
 #!/bin/bash
 
-pushd /opt/MutationProjector > /dev/null
+set -euo pipefail
 
-/opt/conda/envs/MutationProjector/bin/python src/predict.py "$@"
+pushd /opt/MutationProjector/src > /dev/null
 
-popd > /dev/null 2&>1
+/opt/conda/envs/MutationProjector/bin/python predict.py "$@"
+
+popd > /dev/null 2>&1
