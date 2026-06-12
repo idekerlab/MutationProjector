@@ -2,5 +2,9 @@ author: "Dynamic Digital Tumors for Precision Oncology Team"
 email: "hello@digitaltumors.org"
 version: "0.1.0"
 repo_url: "https://github.com/idekerlab/MutationProjector"
-description: "Mutation Projector ...."
+description: "MutationProjector transfer-learned prediction and downstream transfer learning for oncology mutation, copy-number, covariate, and outcome matrices."
 computation_name: "Mutation Projector"
+changelog:
+  - version: "0.1.0"
+    changes:
+      - "Initial ADAPT-TAP tooling distribution package."
