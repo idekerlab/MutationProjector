@@ -165,13 +165,14 @@ device-agnostic:
 
 ### Testing the speedup on Apple Silicon (M-series GPU / unified memory)
 
-1. **Environment** (native pip install, not the CUDA-pinned `conda-envs/env.yml`):
+1. **Environment** (native `uv` venv, not the CUDA-pinned `conda-envs/env.yml`):
    ```
-   python3 -m venv .venv && source .venv/bin/activate
-   pip install torch  # macOS wheels include MPS support out of the box
-   pip install torch_geometric pandas==1.5.3 scikit-learn==1.3.2 scipy==1.13.1 numpy matplotlib seaborn joblib ndex2 networkx
+   uv venv .venv && source .venv/bin/activate
+   uv pip install torch  # macOS wheels include MPS support out of the box
+   uv pip install torch_geometric pandas==1.5.3 scikit-learn==1.3.2 scipy==1.13.1 numpy matplotlib seaborn joblib ndex2 networkx
    ```
-2. **Run the benchmark** from inside `src/` (this repo's scripts resolve paths relative to CWD):
+2. **Run the benchmark** from inside `src/` (this repo's scripts resolve paths relative to CWD;
+   the venv from step 1 should already be activated):
    ```
    cd src
    python benchmark_device.py --devices cpu mps --batch-size 64 --repeats 10
