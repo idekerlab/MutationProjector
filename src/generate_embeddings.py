@@ -26,6 +26,7 @@ from import_network import *
 from nn_training_functions import *
 from MutationProjector_nn import *
 from load_model import adapt_legacy_state_dict
+from device_utils import resolve_device
 
 def gen_embedding():
     #############################################
@@ -149,6 +150,7 @@ def embed_from_pretrained(pretrained_model, dataset,
         return lists
 
     ## Generate embeddings
+    cuda_device = resolve_device(cuda_device)
     # padding
     padding_info = {'IMvigor210':list(np.arange(1, 9)),
                 'mel_dfci_2019':[1],
@@ -156,10 +158,10 @@ def embed_from_pretrained(pretrained_model, dataset,
     if len(padding_idx) > 0:
         padding_info[dataset] = padding_idx
     # embeddings
-    Gene_emb = torch.tensor([]).cuda(cuda_device)
-    Rep_emb = torch.tensor([]).cuda(cuda_device)
-    Cov_emb = torch.tensor([]).cuda(cuda_device)
-    Final_emb = torch.tensor([]).cuda(cuda_device)
+    Gene_emb = torch.tensor([]).to(cuda_device)
+    Rep_emb = torch.tensor([]).to(cuda_device)
+    Cov_emb = torch.tensor([]).to(cuda_device)
+    Final_emb = torch.tensor([]).to(cuda_device)
     # X2_test
     X_test = gData[dataset]
     X_special = torch.tensor(sData[dataset].set_index('sample').values)
@@ -173,7 +175,7 @@ def embed_from_pretrained(pretrained_model, dataset,
     output_sizes = [3, 10, 3]
 
     ## load model
-    tmp = torch.load('%s/%s'%(dir_pretrained, model_name))
+    tmp = torch.load('%s/%s'%(dir_pretrained, model_name), map_location='cpu')
     pretrained_model = MutationProjector(num_genes, num_features, network_edges, num_GATblock, num_heads, dropout_p, cuda_device, output_sizes, mask_percentage, input_genes, dff, use_representative_embedding=use_rep, ssl_task_index=0, use_special_token=use_special_tokens, num_special_tokens=num_special_tokens, num_bins=num_bins2, use_pooling=use_pooling)
     pretrained_model.load_state_dict(adapt_legacy_state_dict(pretrained_model, tmp))
 

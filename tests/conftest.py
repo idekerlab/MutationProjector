@@ -40,7 +40,7 @@ def tiny_model_config():
         num_bins=[3, 4],
         output_sizes=[2, 3, 2],
         ssl_task_index=0,
-        cuda_device=0,
+        cuda_device='cpu',
         dropout_p=0.0,
     )
 

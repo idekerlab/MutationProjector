@@ -41,7 +41,7 @@ def _production_hparams(network_edges):
     import numpy as np
     return dict(
         num_genes=468, num_features=10, network_edges=network_edges, num_GATblock=2, num_heads=1,
-        dropout_p=0.1, cuda_device=0, output_sizes=[3, 10, 3], mask_percentage=0, input_genes=[],
+        dropout_p=0.1, cuda_device='cpu', output_sizes=[3, 10, 3], mask_percentage=0, input_genes=[],
         d_ff=10, use_representative_embedding=1, ssl_task_index=0, use_special_token=1,
         num_special_tokens=9, num_bins=list(np.append([5, 5], [2]*7)), use_pooling=0,
     )

@@ -31,7 +31,7 @@ def test_full_forward_matches_reference(branch, tiny_model_config):
 
     common = dict(
         num_genes=cfg['num_genes'], num_features=cfg['num_features'], network_edges=network_edges,
-        num_GATblock=cfg['num_GATblock'], num_heads=cfg['num_heads'], dropout_p=0.0, cuda_device=0,
+        num_GATblock=cfg['num_GATblock'], num_heads=cfg['num_heads'], dropout_p=0.0, cuda_device='cpu',
         output_sizes=cfg['output_sizes'], mask_percentage=0, input_genes=[], d_ff=cfg['d_ff'],
         ssl_task_index=cfg['ssl_task_index'],
     )

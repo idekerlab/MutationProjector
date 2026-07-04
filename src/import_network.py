@@ -41,6 +41,6 @@ class load_network():
         else:
             fiName = f'{network}_expanded'
 
-        edges = torch.load(f'{self.fi_dir}/data/networks/{fiName}.pt')
+        edges = torch.load(f'{self.fi_dir}/data/networks/{fiName}.pt', map_location='cpu')
         return edges
 

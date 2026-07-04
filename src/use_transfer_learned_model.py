@@ -36,9 +36,9 @@ def use_transfer_learned(downstream_eval,
     
     # inputs
     # representative gene embedding
-    rep_emb = torch.load(f'{PATH_TEST}/rep_emb.pt').detach().cpu()
+    rep_emb = torch.load(f'{PATH_TEST}/rep_emb.pt', map_location='cpu').detach().cpu()
     # covariate embedding
-    cov_emb = torch.load(f'{PATH_TEST}/cov_emb.pt').detach().cpu()
+    cov_emb = torch.load(f'{PATH_TEST}/cov_emb.pt', map_location='cpu').detach().cpu()
     # X (input data)
     X = torch.cat((rep_emb.reshape(rep_emb.shape[0],-1), cov_emb.reshape(cov_emb.shape[0],-1)), dim=1)
     # Scale data

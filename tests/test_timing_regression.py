@@ -42,7 +42,7 @@ def test_new_forward_not_slower_than_old_synthetic():
     network_edges = make_network_edges(num_genes, num_networks)
     hp = dict(
         num_genes=num_genes, num_features=num_features, network_edges=network_edges,
-        num_GATblock=2, num_heads=1, dropout_p=0.0, cuda_device=0, output_sizes=[3, 10, 3],
+        num_GATblock=2, num_heads=1, dropout_p=0.0, cuda_device='cpu', output_sizes=[3, 10, 3],
         mask_percentage=0, input_genes=[], d_ff=10, use_representative_embedding=True,
         ssl_task_index=0, use_special_token=True, num_special_tokens=9, num_bins=[5, 5, 2, 2, 2, 2, 2, 2, 2],
         use_pooling=False,

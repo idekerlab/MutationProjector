@@ -25,6 +25,7 @@ from load_geneList import *
 from nn_training_functions import *
 from loss import *
 from GATv2_functions import *
+from device_utils import resolve_device
 
 
 class MutationProjector(nn.Module):
@@ -42,7 +43,7 @@ class MutationProjector(nn.Module):
         self.num_GATblock = num_GATblock
         self.num_heads = num_heads
         self.dropout_p = dropout_p
-        self.cuda_device = cuda_device
+        self.cuda_device = resolve_device(cuda_device)
         self.output_sizes = output_sizes
         self.mask_percentage = mask_percentage
         self.input_genes = input_genes
@@ -111,10 +112,10 @@ class MutationProjector(nn.Module):
         if (self.use_special_token == False) and (self.use_representative_embedding == False):
             for i in range(len(self.output_sizes)):
                 if i == self.ssl_task_index:
-                    prot2gene_layer = BatchedPerGeneLinear(self.num_genes, self.num_features, self.output_sizes[i]).cuda(self.cuda_device)
+                    prot2gene_layer = BatchedPerGeneLinear(self.num_genes, self.num_features, self.output_sizes[i]).to(self.cuda_device)
                     self.final_linear1.append(prot2gene_layer)
                 else:
-                    self.final_linear1.append(nn.Linear(self.gene_emb_size, self.output_sizes[i]).cuda(self.cuda_device))
+                    self.final_linear1.append(nn.Linear(self.gene_emb_size, self.output_sizes[i]).to(self.cuda_device))
                 
         # use cls token and/or representative embeddings for certain tasks
         else:
@@ -128,29 +129,29 @@ class MutationProjector(nn.Module):
                 else:
                     rep_emb_size = self.num_features*self.num_special_tokens                    
                     self.FFNN = nn.Sequential(
-                        nn.Linear(self.num_genes*self.num_features, self.num_features*self.num_special_tokens).cuda(self.cuda_device),
-                        nn.LayerNorm(self.num_features*self.num_special_tokens).cuda(self.cuda_device),
-                        nn.ReLU().cuda(self.cuda_device)
+                        nn.Linear(self.num_genes*self.num_features, self.num_features*self.num_special_tokens).to(self.cuda_device),
+                        nn.LayerNorm(self.num_features*self.num_special_tokens).to(self.cuda_device),
+                        nn.ReLU().to(self.cuda_device)
                     )
             # special token embeddings
             if self.use_special_token == True:
                 special_token_emb_size = self.num_features*self.num_special_tokens
             
             # layer norm
-            self.Layer_norm = nn.LayerNorm(self.num_features).cuda(self.cuda_device)
+            self.Layer_norm = nn.LayerNorm(self.num_features).to(self.cuda_device)
             
             # final_linear1
             for i in range(len(self.output_sizes)):
                 if i == self.ssl_task_index:
-                    prot2gene_layer = BatchedPerGeneLinear(self.num_genes, self.num_features, self.output_sizes[i]).cuda(self.cuda_device)
+                    prot2gene_layer = BatchedPerGeneLinear(self.num_genes, self.num_features, self.output_sizes[i]).to(self.cuda_device)
                     self.final_linear1.append(prot2gene_layer)
                 else:
-                    self.final_linear1.append(nn.Linear(self.num_features, self.output_sizes[i]).cuda(self.cuda_device))
+                    self.final_linear1.append(nn.Linear(self.num_features, self.output_sizes[i]).to(self.cuda_device))
                     ## concat_FF_layer
                     self.concat_FF_layer = nn.Sequential(
-                        nn.Linear(special_token_emb_size+rep_emb_size, self.num_features).cuda(self.cuda_device),
-                        nn.LayerNorm(self.num_features).cuda(self.cuda_device),
-                        nn.ReLU().cuda(self.cuda_device)
+                        nn.Linear(special_token_emb_size+rep_emb_size, self.num_features).to(self.cuda_device),
+                        nn.LayerNorm(self.num_features).to(self.cuda_device),
+                        nn.ReLU().to(self.cuda_device)
                     )
                 
 
@@ -194,14 +195,14 @@ class MutationProjector(nn.Module):
             for s_idx in range(self.num_special_tokens):
                 # no padding
                 if apply_paddings == False:
-                    X_add = self.special_tokenizer[s_idx](X_special_tokens[:,s_idx].cuda(self.cuda_device))
+                    X_add = self.special_tokenizer[s_idx](X_special_tokens[:,s_idx].to(self.cuda_device))
                 # apply padding
                 else:
                     assert type(apply_paddings)==list, 'provide correct "apply_paddings" parameter'
                     apply_padding = False
                     if s_idx in apply_paddings:
                         apply_padding = True
-                    X_add = self.special_tokenizer[s_idx](X_special_tokens[:,s_idx].cuda(self.cuda_device), apply_padding=apply_padding)
+                    X_add = self.special_tokenizer[s_idx](X_special_tokens[:,s_idx].to(self.cuda_device), apply_padding=apply_padding)
                 # add embeddings 
                 X_add = torch.unsqueeze(X_add, dim=1)
                 X = torch.cat((X, X_add), dim=1)
@@ -229,13 +230,13 @@ class MutationProjector(nn.Module):
             special_token_emb = torch.stack(special_token_emb, dim=1)
             cov_emb = torch.stack(cov_emb, dim=1)
         else: 
-            special_token_emb = torch.tensor([]).cuda(self.cuda_device)
+            special_token_emb = torch.tensor([]).to(self.cuda_device)
             cov_emb = torch.tensor([])
         
        
         
         ## Representative embeddings
-        rep_emb = torch.tensor([]).cuda(self.cuda_device)
+        rep_emb = torch.tensor([]).to(self.cuda_device)
         if self.use_representative_embedding == True:
             # pooling
             if self.use_pooling==True:

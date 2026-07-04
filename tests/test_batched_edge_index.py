@@ -38,8 +38,8 @@ def _run_case(num_genes, num_features, num_networks, num_GATblock, batch_size, n
     torch.manual_seed(seed)
     network_edges = make_network_edges(num_genes, num_networks)
 
-    old = OldGATv2block(num_genes, num_features, network_edges, num_GATblock, num_heads, dropout_p=0.0, cuda_device=0, d_ff=7, self_loop=False)
-    new = NewGATv2block(num_genes, num_features, network_edges, num_GATblock, num_heads, dropout_p=0.0, cuda_device=0, d_ff=7, self_loop=False)
+    old = OldGATv2block(num_genes, num_features, network_edges, num_GATblock, num_heads, dropout_p=0.0, cuda_device='cpu', d_ff=7, self_loop=False)
+    new = NewGATv2block(num_genes, num_features, network_edges, num_GATblock, num_heads, dropout_p=0.0, cuda_device='cpu', d_ff=7, self_loop=False)
     copy_weights(old, new, num_GATblock, num_networks)
     old.eval(); new.eval()
 

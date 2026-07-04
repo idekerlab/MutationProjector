@@ -69,7 +69,12 @@ def adapt_legacy_state_dict(model, legacy_state_dict):
     return new_state_dict
 
 
-def load_MutationProjector():
+def load_MutationProjector(device=0):
+    '''
+    device: defaults to 0 (legacy convention: CUDA device index 0), for backward compatibility.
+    Pass 'mps' (Apple Silicon GPU/unified memory), 'cpu', 'cuda:0', or a torch.device to target
+    a different backend.
+    '''
     # fi_dir
     fi_dir = Path().resolve().parent
     
@@ -82,7 +87,7 @@ def load_MutationProjector():
     networks = 'GRN_expanded;E3_expanded;phosphorylation_expanded;physical_ppi_expanded;genetic_interaction_expanded;DDRAM;STRING;PCNET'.split(';')
     network_edges = []
     for n_idx, network in enumerate(networks):
-        edges = torch.load(f'{fi_dir}/data/networks/{network}.pt')
+        edges = torch.load(f'{fi_dir}/data/networks/{network}.pt', map_location='cpu')
         network_edges.append(edges)
     print(f'finished loading networks, {time.ctime()}')
 
@@ -101,14 +106,14 @@ def load_MutationProjector():
     use_special_tokens=1
     num_bins=5
     epoch=100
-    cuda_device=0
+    cuda_device=device
     lr=0.001
     dropout_p=0.1
     num_heads=1
     mask_percentage=0
     batch_size = 64
-    weight_decay = 0.0001    
-    cuda_device=0
+    weight_decay = 0.0001
+    cuda_device=device
     lr=0.001
     dropout_p=0.1
     num_heads=1
@@ -126,7 +131,7 @@ def load_MutationProjector():
 
 
     ## load pretrained_model
-    tmp = torch.load(f'{fi_dir}/pretrained_model/pretrained_model.pth')
+    tmp = torch.load(f'{fi_dir}/pretrained_model/pretrained_model.pth', map_location='cpu')
     pretrained_model = MutationProjector(num_genes, num_features, network_edges, num_GATblock, num_heads, dropout_p, cuda_device, output_sizes, mask_percentage, input_genes, dff, use_representative_embedding=use_rep, ssl_task_index=0, use_special_token=use_special_tokens, num_special_tokens=num_special_tokens, num_bins=num_bins2, use_pooling=use_pooling)
     pretrained_model.load_state_dict(adapt_legacy_state_dict(pretrained_model, tmp))
     print('model loaded')

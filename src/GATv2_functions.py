@@ -16,6 +16,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GATv2Conv
 
+from device_utils import resolve_device
+
 
 # BatchedPerGeneLinear: num_genes independent Linear(in_features, out_features) layers,
 # applied to the gene dimension of a (batch, num_genes, in_features) tensor in one batched
@@ -76,7 +78,7 @@ class GATv2block(nn.Module):
         self.num_GATblock = num_GATblock
         self.num_heads = num_heads
         self.dropout_p = dropout_p
-        self.cuda_device = cuda_device
+        self.cuda_device = resolve_device(cuda_device)
         self.d_ff = d_ff
         self.self_loop = self_loop
         
@@ -94,16 +96,16 @@ class GATv2block(nn.Module):
 
 
         # Linear transformation (per-gene distinct weights, applied as one batched op)
-        self.linear_layers = BatchedPerGeneLinear(self.num_genes, num_features * len(self.network_edges), num_features).cuda(self.cuda_device)
-        self.FF_layer1 = BatchedPerGeneLinear(self.num_genes, self.num_features, self.d_ff).cuda(self.cuda_device)
-        self.FF_layer2 = BatchedPerGeneLinear(self.num_genes, self.d_ff, self.num_features).cuda(self.cuda_device)
+        self.linear_layers = BatchedPerGeneLinear(self.num_genes, num_features * len(self.network_edges), num_features).to(self.cuda_device)
+        self.FF_layer1 = BatchedPerGeneLinear(self.num_genes, self.num_features, self.d_ff).to(self.cuda_device)
+        self.FF_layer2 = BatchedPerGeneLinear(self.num_genes, self.d_ff, self.num_features).to(self.cuda_device)
 
         # dropout
         self.dropout = nn.Dropout(p=self.dropout_p)
         
         # layer norm
-        self.layer_norm1 = nn.ModuleList([nn.LayerNorm(self.num_features).cuda(self.cuda_device) for _ in range(self.num_GATblock)])
-        self.layer_norm2 = nn.ModuleList([nn.LayerNorm(self.num_features).cuda(self.cuda_device) for _ in range(self.num_GATblock)])
+        self.layer_norm1 = nn.ModuleList([nn.LayerNorm(self.num_features).to(self.cuda_device) for _ in range(self.num_GATblock)])
+        self.layer_norm2 = nn.ModuleList([nn.LayerNorm(self.num_features).to(self.cuda_device) for _ in range(self.num_GATblock)])
         
         
     def _get_batched_edge_index(self, network_idx, batch_size):
@@ -113,7 +115,7 @@ class GATv2block(nn.Module):
         # count never change across forward calls, so this only needs to be built once.
         key = (network_idx, batch_size)
         if key not in self._edge_index_cache:
-            edge_index = self.network_edges[network_idx].cuda(self.cuda_device)
+            edge_index = self.network_edges[network_idx].to(self.cuda_device)
             num_nodes = self.num_genes
             num_edges = edge_index.shape[1]
             offsets = (torch.arange(batch_size, device=edge_index.device) * num_nodes).repeat_interleave(num_edges)
@@ -122,7 +124,7 @@ class GATv2block(nn.Module):
 
     def forward(self, X_input, return_attention_weights):
         X_original = X_input.clone()
-        X_original = X_original.cuda(self.cuda_device)
+        X_original = X_original.to(self.cuda_device)
         batch_size = X_input.shape[0]
 
         # attention weights (output)
@@ -139,10 +141,10 @@ class GATv2block(nn.Module):
                     X_train = X.clone()
                 # flatten the batch of identical-topology graphs into one disjoint-block graph
                 # (equivalent to PyG's Batch.from_data_list, without rebuilding Data/DataLoader every call)
-                x_flat = X_train.reshape(batch_size * self.num_genes, self.num_features).cuda(self.cuda_device)
+                x_flat = X_train.reshape(batch_size * self.num_genes, self.num_features).to(self.cuda_device)
                 batched_edge_index = self._get_batched_edge_index(j, batch_size)
                 # GAT layer
-                GATlayer = self.GAT_layers[i][j].cuda(self.cuda_device)
+                GATlayer = self.GAT_layers[i][j].to(self.cuda_device)
 
                 # does not return attention weights
                 if return_attention_weights == False:

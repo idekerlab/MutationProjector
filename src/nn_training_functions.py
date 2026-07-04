@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 import random
 from itertools import *
 import pandas as pd
+from device_utils import resolve_device
 #from tqdm import tqdm
 
 
@@ -16,17 +17,17 @@ class transform_layer(nn.Module):
         super(transform_layer, self).__init__()
         self.num_signatures = num_signatures
         self.num_features = num_features
-        self.cuda_device = cuda_device
+        self.cuda_device = resolve_device(cuda_device)
         
         # linear transformation
         self.DF_linear = nn.Sequential(
-            nn.Linear(self.num_signatures, self.num_features).cuda(self.cuda_device),
-            nn.LayerNorm(self.num_features).cuda(self.cuda_device),
-            nn.ReLU().cuda(self.cuda_device))
+            nn.Linear(self.num_signatures, self.num_features).to(self.cuda_device),
+            nn.LayerNorm(self.num_features).to(self.cuda_device),
+            nn.ReLU().to(self.cuda_device))
             
         
     def forward(self, data_values):
-        return self.DF_linear(data_values.cuda(self.cuda_device))
+        return self.DF_linear(data_values.to(self.cuda_device))
 
     
 ## tokenize special tokens
@@ -35,18 +36,18 @@ class tokenize_special_tokens(nn.Module):
         super(tokenize_special_tokens, self).__init__()
         self.num_features = num_features
         self.num_bins = num_bins
-        self.cuda_device = cuda_device
+        self.cuda_device = resolve_device(cuda_device)
         
         # generate embedding layer
-        self.token_emb = nn.Embedding(self.num_bins, self.num_features).cuda(self.cuda_device)
+        self.token_emb = nn.Embedding(self.num_bins, self.num_features).to(self.cuda_device)
         
     def forward(self, values, apply_padding=False):
         # normalize input to a float64 tensor (matches pandas' internal float64 bin-edge math)
         if type(values) == list or type(values) == np.ndarray:
             values_t = torch.as_tensor(values, dtype=torch.float64)
         else:
-            values_t = values.detach().to(torch.float64)
-        values_t = values_t.cuda(self.cuda_device)
+            values_t = values.detach().to(torch.float64).contiguous()
+        values_t = values_t.to(self.cuda_device)
 
         # return embeddings
         if apply_padding == False:
@@ -63,7 +64,7 @@ class tokenize_special_tokens(nn.Module):
             else:
                 edges_np = np.linspace(mn, mx, self.num_bins + 1)
                 edges_np[0] -= (mx - mn) * 0.001
-            boundaries = torch.from_numpy(edges_np[1:-1]).cuda(self.cuda_device)
+            boundaries = torch.from_numpy(edges_np[1:-1]).to(self.cuda_device)
             binned = torch.bucketize(values_t, boundaries, right=False)
             # return embeddings
             out_emb = self.token_emb(binned)
@@ -71,7 +72,7 @@ class tokenize_special_tokens(nn.Module):
             # NOTE (pre-existing bug, out of scope for this refactor, flagged not fixed):
             # padding_emb is instantiated fresh on every call instead of being a persistent
             # __init__ submodule, so it is randomly re-initialized and never trained.
-            padding_emb = nn.Embedding(1, self.num_features, padding_idx=0).cuda(self.cuda_device)
+            padding_emb = nn.Embedding(1, self.num_features, padding_idx=0).to(self.cuda_device)
             binned = torch.zeros(values_t.shape[0], dtype=torch.long, device=values_t.device)
             out_emb = padding_emb(binned)
         return out_emb
@@ -150,7 +151,7 @@ class tokenizer(nn.Module):
         self.num_genes = num_genes
         self.num_features = num_features
         self.num_gene_features=num_gene_features
-        self.cuda_device = cuda_device
+        self.cuda_device = resolve_device(cuda_device)
         self.cls_token = cls_token
         self.mask_nonzeros = mask_nonzeros
         self.num_gene_features = num_gene_features
@@ -169,14 +170,14 @@ class tokenizer(nn.Module):
         
         ## embedding layers
         # gene embedding
-        self.gene_embedding = nn.Embedding(self.num_genes, self.num_features).cuda(self.cuda_device)
+        self.gene_embedding = nn.Embedding(self.num_genes, self.num_features).to(self.cuda_device)
         # use cls token
         if type(self.cls_token) == torch.nn.modules.sparse.Embedding:
-            self.cls_token = self.cls_token.cuda(self.cuda_device)
+            self.cls_token = self.cls_token.to(self.cuda_device)
             self.gene_embedding = nn.Embedding.from_pretrained( torch.cat((self.gene_embedding.weight, self.cls_token.weight), dim=0), freeze=False)
             
         # mutation embedding
-        self.mut_embedding = nn.Embedding(len(self.vocab.keys()), self.num_features).cuda(self.cuda_device)
+        self.mut_embedding = nn.Embedding(len(self.vocab.keys()), self.num_features).to(self.cuda_device)
     
    
     
@@ -184,7 +185,7 @@ class tokenizer(nn.Module):
         N_gene_emb = self.num_genes
         if type(self.cls_token) == torch.nn.modules.sparse.Embedding:
             N_gene_emb += 1
-        out = self.gene_embedding(torch.tensor(np.arange(N_gene_emb)).cuda(self.cuda_device)).unsqueeze(0).repeat(num_samples, 1, 1)
+        out = self.gene_embedding(torch.tensor(np.arange(N_gene_emb)).to(self.cuda_device)).unsqueeze(0).repeat(num_samples, 1, 1)
         return out
 
     
@@ -194,7 +195,7 @@ class tokenizer(nn.Module):
         if type(self.cls_token) == torch.nn.modules.sparse.Embedding:
             N_gene_emb += 1        
 
-        out = torch.zeros(N_gene_emb, self.num_features, requires_grad=True).cuda(self.cuda_device)
+        out = torch.zeros(N_gene_emb, self.num_features, requires_grad=True).to(self.cuda_device)
         out = out.unsqueeze(0).repeat(X_converted.shape[0], 1, 1)
         positions_to_mask = []
         
@@ -226,12 +227,12 @@ class tokenizer(nn.Module):
             
         # create mutation embeddings (one batched lookup instead of a per-(value,gene) loop)
         num_gene_cols = X_converted.shape[1]
-        mut_emb_all = self.mut_embedding(X_converted.cuda(self.cuda_device))
+        mut_emb_all = self.mut_embedding(X_converted.to(self.cuda_device))
         out[:, :num_gene_cols, :] = mut_emb_all
 
         # masking (applied after, so masked positions always end up with masked_emb)
         if num_to_mask > 0:
-            masked_emb = self.mut_embedding(torch.tensor(self.vocab['masked']).cuda(self.cuda_device))
+            masked_emb = self.mut_embedding(torch.tensor(self.vocab['masked']).to(self.cuda_device))
             out[:,positions_to_mask,:] = masked_emb.repeat(X_converted.shape[0], 1, 1)
 
         return out, positions_to_mask

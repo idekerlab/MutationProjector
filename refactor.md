@@ -139,3 +139,51 @@ Run with `pytest tests/` from the repo root (`pytest.ini` wires `src/` and `test
 
 Nothing outside `src/`, `tests/`, and `pytest.ini` was changed; `pretrained_model.pth` itself is
 untouched.
+
+## Device support: Apple Silicon (MPS) / CPU / CUDA
+
+The codebase originally hardcoded `.cuda(device)` everywhere, which only works on NVIDIA GPUs
+and raises immediately on any machine without CUDA (including Apple Silicon). This is now
+device-agnostic:
+
+- `src/device_utils.py` adds `resolve_device(device)`, which normalizes a plain int (the
+  historical `.cuda(0)` convention) to a CUDA device index for backward compatibility, or passes
+  through any native device spec — `'mps'` (Apple Silicon GPU / unified memory), `'cpu'`,
+  `'cuda:0'`, or a `torch.device`.
+- Every `.cuda(device)` call site in `GATv2_functions.py`, `MutationProjector_nn.py`,
+  `nn_training_functions.py`, and `generate_embeddings.py` was replaced with `.to(device)`
+  (where `device` is resolved via `resolve_device` once, at construction time).
+- `torch.load(...)` calls for the checkpoint, network edge files, and saved embeddings
+  (`load_model.py`, `generate_embeddings.py`, `import_network.py`, `transfer_learn.py`,
+  `use_transfer_learned_model.py`) now pass `map_location='cpu'` — without this, loading a
+  checkpoint saved from CUDA tensors raises on any non-CUDA machine, before device placement
+  even gets a chance to run.
+- `load_model.py`'s `load_MutationProjector(device=0)` now accepts an optional `device` override
+  (still defaults to legacy CUDA index `0` for backward compatibility).
+- `src/benchmark_device.py` is a standalone script to measure forward-pass latency across
+  devices using the real checkpoint and shipped test data — see below for Mac usage.
+
+### Testing the speedup on Apple Silicon (M-series GPU / unified memory)
+
+1. **Environment** (native pip install, not the CUDA-pinned `conda-envs/env.yml`):
+   ```
+   python3 -m venv .venv && source .venv/bin/activate
+   pip install torch  # macOS wheels include MPS support out of the box
+   pip install torch_geometric pandas==1.5.3 scikit-learn==1.3.2 scipy==1.13.1 numpy matplotlib seaborn joblib ndex2 networkx
+   ```
+2. **Run the benchmark** from inside `src/` (this repo's scripts resolve paths relative to CWD):
+   ```
+   cd src
+   python benchmark_device.py --devices cpu mps --batch-size 64 --repeats 10
+   ```
+   This loads the real `pretrained_model.pth`, times a forward pass on each device (with a
+   warmup call first), and prints a speedup ratio. It also prints the actual device of the
+   model's parameters as a sanity check that MPS is really being used, not silently falling
+   back to CPU.
+3. **Confirm GPU utilization independently**: open Activity Monitor → Window → GPU History
+   while the benchmark runs, or watch `sudo powermetrics --samplers gpu_power` in another
+   terminal — you should see GPU activity spike during the `mps` run and stay flat during `cpu`.
+4. If you hit "operator not implemented for MPS" errors: some PyTorch/PyG ops still have gaps
+   in MPS coverage depending on your PyTorch version. Set
+   `PYTORCH_ENABLE_MPS_FALLBACK=1` as an environment variable to let those specific ops
+   fall back to CPU automatically rather than crashing (the rest still runs on MPS).

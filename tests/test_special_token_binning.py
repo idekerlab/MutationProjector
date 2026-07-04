@@ -15,9 +15,9 @@ from reference_impls import OldTokenizeSpecialTokens
 
 def _make_pair(num_features, num_bins, seed):
     torch.manual_seed(seed)
-    new = tokenize_special_tokens(num_features, num_bins, cuda_device=0)
+    new = tokenize_special_tokens(num_features, num_bins, cuda_device='cpu')
     torch.manual_seed(seed)
-    old = OldTokenizeSpecialTokens(num_features, num_bins, cuda_device=0)
+    old = OldTokenizeSpecialTokens(num_features, num_bins, cuda_device='cpu')
     assert torch.equal(new.token_emb.weight, old.token_emb.weight)
     return new, old
 

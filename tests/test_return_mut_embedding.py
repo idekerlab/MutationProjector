@@ -8,9 +8,9 @@ from reference_impls import OldTokenizer
 
 def _build_pair(seed, num_genes, num_features, num_gene_features):
     torch.manual_seed(seed)
-    tok_new = tokenizer(num_genes, num_features, cuda_device=0, num_gene_features=num_gene_features)
+    tok_new = tokenizer(num_genes, num_features, cuda_device='cpu', num_gene_features=num_gene_features)
     torch.manual_seed(seed)
-    tok_old = OldTokenizer(num_genes, num_features, cuda_device=0, num_gene_features=num_gene_features)
+    tok_old = OldTokenizer(num_genes, num_features, cuda_device='cpu', num_gene_features=num_gene_features)
     # same seed + same construction order -> identical embedding weights for a fair comparison
     assert torch.equal(tok_new.mut_embedding.weight, tok_old.mut_embedding.weight)
     assert torch.equal(tok_new.gene_embedding.weight, tok_old.gene_embedding.weight)

@@ -45,11 +45,11 @@ def transfer_learn(downstream_train,
     
     # inputs
     # representative gene embedding
-    rep_emb1 = torch.load(f'{PATH_TRAIN}/rep_emb.pt').detach().cpu()
-    rep_emb2 = torch.load(f'{PATH_TEST}/rep_emb.pt').detach().cpu()
+    rep_emb1 = torch.load(f'{PATH_TRAIN}/rep_emb.pt', map_location='cpu').detach().cpu()
+    rep_emb2 = torch.load(f'{PATH_TEST}/rep_emb.pt', map_location='cpu').detach().cpu()
     # covariate embedding
-    cov_emb1 = torch.load(f'{PATH_TRAIN}/cov_emb.pt').detach().cpu()
-    cov_emb2 = torch.load(f'{PATH_TEST}/cov_emb.pt').detach().cpu()
+    cov_emb1 = torch.load(f'{PATH_TRAIN}/cov_emb.pt', map_location='cpu').detach().cpu()
+    cov_emb2 = torch.load(f'{PATH_TEST}/cov_emb.pt', map_location='cpu').detach().cpu()
     # X (input data)
     X1 = torch.cat((rep_emb1.reshape(rep_emb1.shape[0],-1), cov_emb1.reshape(cov_emb1.shape[0],-1)), dim=1)
     X2 = torch.cat((rep_emb2.reshape(rep_emb2.shape[0],-1), cov_emb2.reshape(cov_emb2.shape[0],-1)), dim=1)
