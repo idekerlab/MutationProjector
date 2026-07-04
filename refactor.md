@@ -160,8 +160,10 @@ device-agnostic:
   even gets a chance to run.
 - `load_model.py`'s `load_MutationProjector(device=0)` now accepts an optional `device` override
   (still defaults to legacy CUDA index `0` for backward compatibility).
-- `src/benchmark_device.py` is a standalone script to measure forward-pass latency across
-  devices using the real checkpoint and shipped test data — see below for Mac usage.
+- `src/benchmark_device.py` measures both forward-pass-only inference and a full train step
+  (forward + synthetic loss + backward + optimizer.step()) for old (pre-refactor, CPU-only via
+  a `.cuda()` shim) vs. new (refactored) code, and for new code across devices (cpu/mps/cuda),
+  using the real checkpoint and shipped test data — see below for Mac usage.
 
 ### Testing the speedup on Apple Silicon (M-series GPU / unified memory)
 
@@ -177,10 +179,11 @@ device-agnostic:
    cd src
    python benchmark_device.py --devices cpu mps --batch-size 64 --repeats 10
    ```
-   This loads the real `pretrained_model.pth`, times a forward pass on each device (with a
-   warmup call first), and prints a speedup ratio. It also prints the actual device of the
-   model's parameters as a sanity check that MPS is really being used, not silently falling
-   back to CPU.
+   This loads the real `pretrained_model.pth`, times both a forward-only pass and a full train
+   step on each device (each with a warmup call first), and prints speedup ratios for both. It
+   also prints the actual device of the model's parameters as a sanity check that MPS is really
+   being used, not silently falling back to CPU. Pass `--skip-train-step` for a faster,
+   forward-only run.
 3. **Confirm GPU utilization independently**: open Activity Monitor → Window → GPU History
    while the benchmark runs, or watch `sudo powermetrics --samplers gpu_power` in another
    terminal — you should see GPU activity spike during the `mps` run and stay flat during `cpu`.
