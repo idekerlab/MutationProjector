@@ -42,19 +42,22 @@ class tokenize_special_tokens(nn.Module):
         self.token_emb = nn.Embedding(self.num_bins, self.num_features).to(self.cuda_device)
         
     def forward(self, values, apply_padding=False):
-        # normalize input to a float64 tensor (matches pandas' internal float64 bin-edge math)
+        # normalize input to a CPU float64 tensor (matches pandas' internal float64 bin-edge
+        # math). Deliberately stays on CPU for this whole computation, regardless of
+        # self.cuda_device: MPS (Apple Silicon) doesn't support float64 at all, and this is
+        # cheap either way (num_bins+1 edges, not the full batch) -- only the final integer
+        # bin indices get moved to the target device, for the embedding lookup.
         if type(values) == list or type(values) == np.ndarray:
             values_t = torch.as_tensor(values, dtype=torch.float64)
         else:
-            values_t = values.detach().to(torch.float64).contiguous()
-        values_t = values_t.to(self.cuda_device)
+            values_t = values.detach().cpu().to(torch.float64).contiguous()
 
         # return embeddings
         if apply_padding == False:
             # bin values: replicates pandas.cut(bins=int)'s adaptive equal-width binning
             # (min/max of this call's values, 0.1%-of-range edge widening, right-closed
             # intervals) exactly, but without round-tripping the whole array through
-            # GPU->CPU->pandas->GPU -- only the num_bins+1 edge scalars touch numpy/CPU.
+            # GPU->CPU->pandas->GPU -- only the num_bins+1 edge scalars touch numpy.
             mn = values_t.min().item()
             mx = values_t.max().item()
             if mn == mx:
@@ -64,16 +67,16 @@ class tokenize_special_tokens(nn.Module):
             else:
                 edges_np = np.linspace(mn, mx, self.num_bins + 1)
                 edges_np[0] -= (mx - mn) * 0.001
-            boundaries = torch.from_numpy(edges_np[1:-1]).to(self.cuda_device)
+            boundaries = torch.from_numpy(edges_np[1:-1])
             binned = torch.bucketize(values_t, boundaries, right=False)
             # return embeddings
-            out_emb = self.token_emb(binned)
+            out_emb = self.token_emb(binned.to(self.cuda_device))
         elif apply_padding == True:
             # NOTE (pre-existing bug, out of scope for this refactor, flagged not fixed):
             # padding_emb is instantiated fresh on every call instead of being a persistent
             # __init__ submodule, so it is randomly re-initialized and never trained.
             padding_emb = nn.Embedding(1, self.num_features, padding_idx=0).to(self.cuda_device)
-            binned = torch.zeros(values_t.shape[0], dtype=torch.long, device=values_t.device)
+            binned = torch.zeros(values_t.shape[0], dtype=torch.long).to(self.cuda_device)
             out_emb = padding_emb(binned)
         return out_emb
             
