@@ -25,7 +25,7 @@ from load_geneList import *
 from nn_training_functions import *
 from loss import *
 from GATv2_functions import *
-from device_utils import resolve_device
+from device_utils import resolve_device, to_device_safe
 
 
 class MutationProjector(nn.Module):
@@ -195,14 +195,14 @@ class MutationProjector(nn.Module):
             for s_idx in range(self.num_special_tokens):
                 # no padding
                 if apply_paddings == False:
-                    X_add = self.special_tokenizer[s_idx](X_special_tokens[:,s_idx].to(self.cuda_device))
+                    X_add = self.special_tokenizer[s_idx](to_device_safe(X_special_tokens[:,s_idx], self.cuda_device))
                 # apply padding
                 else:
                     assert type(apply_paddings)==list, 'provide correct "apply_paddings" parameter'
                     apply_padding = False
                     if s_idx in apply_paddings:
                         apply_padding = True
-                    X_add = self.special_tokenizer[s_idx](X_special_tokens[:,s_idx].to(self.cuda_device), apply_padding=apply_padding)
+                    X_add = self.special_tokenizer[s_idx](to_device_safe(X_special_tokens[:,s_idx], self.cuda_device), apply_padding=apply_padding)
                 # add embeddings 
                 X_add = torch.unsqueeze(X_add, dim=1)
                 X = torch.cat((X, X_add), dim=1)
