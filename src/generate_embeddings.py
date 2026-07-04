@@ -25,6 +25,7 @@ from nn_training_functions import *
 from import_network import *
 from nn_training_functions import *
 from MutationProjector_nn import *
+from load_model import adapt_legacy_state_dict
 
 def gen_embedding():
     #############################################
@@ -174,7 +175,7 @@ def embed_from_pretrained(pretrained_model, dataset,
     ## load model
     tmp = torch.load('%s/%s'%(dir_pretrained, model_name))
     pretrained_model = MutationProjector(num_genes, num_features, network_edges, num_GATblock, num_heads, dropout_p, cuda_device, output_sizes, mask_percentage, input_genes, dff, use_representative_embedding=use_rep, ssl_task_index=0, use_special_token=use_special_tokens, num_special_tokens=num_special_tokens, num_bins=num_bins2, use_pooling=use_pooling)
-    pretrained_model.load_state_dict(tmp)
+    pretrained_model.load_state_dict(adapt_legacy_state_dict(pretrained_model, tmp))
 
     ## padding
     apply_paddings = False

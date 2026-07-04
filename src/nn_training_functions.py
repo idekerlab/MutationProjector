@@ -41,23 +41,39 @@ class tokenize_special_tokens(nn.Module):
         self.token_emb = nn.Embedding(self.num_bins, self.num_features).cuda(self.cuda_device)
         
     def forward(self, values, apply_padding=False):
-        # temp dataframe
+        # normalize input to a float64 tensor (matches pandas' internal float64 bin-edge math)
         if type(values) == list or type(values) == np.ndarray:
-            temp = pd.DataFrame({'value':values})
+            values_t = torch.as_tensor(values, dtype=torch.float64)
         else:
-            temp = pd.DataFrame({'value':values.detach().cpu().numpy()})
-        
+            values_t = values.detach().to(torch.float64)
+        values_t = values_t.cuda(self.cuda_device)
+
         # return embeddings
         if apply_padding == False:
-            # bin values
-            temp['binned'] = pd.cut(temp['value'], bins=self.num_bins, labels=np.arange(self.num_bins))
+            # bin values: replicates pandas.cut(bins=int)'s adaptive equal-width binning
+            # (min/max of this call's values, 0.1%-of-range edge widening, right-closed
+            # intervals) exactly, but without round-tripping the whole array through
+            # GPU->CPU->pandas->GPU -- only the num_bins+1 edge scalars touch numpy/CPU.
+            mn = values_t.min().item()
+            mx = values_t.max().item()
+            if mn == mx:
+                adj_mn = mn - (0.001 * abs(mn) if mn != 0 else 0.001)
+                adj_mx = mx + (0.001 * abs(mx) if mx != 0 else 0.001)
+                edges_np = np.linspace(adj_mn, adj_mx, self.num_bins + 1)
+            else:
+                edges_np = np.linspace(mn, mx, self.num_bins + 1)
+                edges_np[0] -= (mx - mn) * 0.001
+            boundaries = torch.from_numpy(edges_np[1:-1]).cuda(self.cuda_device)
+            binned = torch.bucketize(values_t, boundaries, right=False)
             # return embeddings
-            out_emb = self.token_emb(torch.tensor(temp['binned'].tolist()).cuda(self.cuda_device))
+            out_emb = self.token_emb(binned)
         elif apply_padding == True:
-            # return
+            # NOTE (pre-existing bug, out of scope for this refactor, flagged not fixed):
+            # padding_emb is instantiated fresh on every call instead of being a persistent
+            # __init__ submodule, so it is randomly re-initialized and never trained.
             padding_emb = nn.Embedding(1, self.num_features, padding_idx=0).cuda(self.cuda_device)
-            temp['binned'] = [0]*temp.shape[0]
-            out_emb = padding_emb(torch.tensor(temp['binned'].tolist()).cuda(self.cuda_device))
+            binned = torch.zeros(values_t.shape[0], dtype=torch.long, device=values_t.device)
+            out_emb = padding_emb(binned)
         return out_emb
             
 
@@ -115,21 +131,11 @@ def batch_index(num_sample, batch_size, random_state=42, drop_last=True, sample_
 ##=====================================================================================================
 ## Tokenize input and generate gene embeddings
 def convert_mutations(X):
-    out = []
-    # all mutation combinations
-    alt_combo = list(product([0, 1], repeat=X.shape[-1]))
-
-    # vocab
-    vocab = {}
-    for value, key in enumerate(alt_combo):
-        vocab[key] = value
-    vocab['masked'] = value + 1
-    
-    # for i in tqdm(range(X.shape[0])):
-    for i in range(X.shape[0]):
-        temp = [vocab[tuple(X[i][j].numpy())] for j in range(X.shape[1])]
-        out.append(temp)
-    return torch.tensor(np.array(out))
+    # vocab index == binary value of each gene's feature tuple, MSB first
+    # (itertools.product([0,1], repeat=k) enumerates in that exact order)
+    k = X.shape[-1]
+    weights = 2 ** torch.arange(k - 1, -1, -1)
+    return (X.long() * weights).sum(dim=-1)
 
 
 
@@ -178,7 +184,7 @@ class tokenizer(nn.Module):
         N_gene_emb = self.num_genes
         if type(self.cls_token) == torch.nn.modules.sparse.Embedding:
             N_gene_emb += 1
-        out = self.gene_embedding(torch.tensor(np.arange(N_gene_emb)).cuda(self.cuda_device)).unsqueeze(0).repeat(num_samples, 1, 1).cuda(self.cuda_device)
+        out = self.gene_embedding(torch.tensor(np.arange(N_gene_emb)).cuda(self.cuda_device)).unsqueeze(0).repeat(num_samples, 1, 1)
         return out
 
     
@@ -218,20 +224,16 @@ class tokenizer(nn.Module):
             positions_to_mask = test_geneset
             num_to_mask = len(positions_to_mask)
             
-        # masking
+        # create mutation embeddings (one batched lookup instead of a per-(value,gene) loop)
+        num_gene_cols = X_converted.shape[1]
+        mut_emb_all = self.mut_embedding(X_converted.cuda(self.cuda_device))
+        out[:, :num_gene_cols, :] = mut_emb_all
+
+        # masking (applied after, so masked positions always end up with masked_emb)
         if num_to_mask > 0:
             masked_emb = self.mut_embedding(torch.tensor(self.vocab['masked']).cuda(self.cuda_device))
             out[:,positions_to_mask,:] = masked_emb.repeat(X_converted.shape[0], 1, 1)
-            
-        # create mutation embeddings
-        for value, key in enumerate(self.alt_combo):
-            i_, j_ = torch.where(X_converted == torch.tensor(value)) # i_: samples, j_: genes
-            mut_emb = self.mut_embedding(torch.tensor(value).cuda(self.cuda_device))
-            for i, j in zip(i_, j_):
-                # avoid changing the masked region
-                if not j.item() in positions_to_mask:
-                    out[i][j] = mut_emb
-        
+
         return out, positions_to_mask
         
         

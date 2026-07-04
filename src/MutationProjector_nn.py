@@ -111,9 +111,7 @@ class MutationProjector(nn.Module):
         if (self.use_special_token == False) and (self.use_representative_embedding == False):
             for i in range(len(self.output_sizes)):
                 if i == self.ssl_task_index:
-                    prot2gene_layer = nn.ModuleList(
-                        [nn.Linear(self.num_features, self.output_sizes[i]).cuda(self.cuda_device) for _ in range(self.num_genes)
-                        ])
+                    prot2gene_layer = BatchedPerGeneLinear(self.num_genes, self.num_features, self.output_sizes[i]).cuda(self.cuda_device)
                     self.final_linear1.append(prot2gene_layer)
                 else:
                     self.final_linear1.append(nn.Linear(self.gene_emb_size, self.output_sizes[i]).cuda(self.cuda_device))
@@ -144,9 +142,7 @@ class MutationProjector(nn.Module):
             # final_linear1
             for i in range(len(self.output_sizes)):
                 if i == self.ssl_task_index:
-                    prot2gene_layer = nn.ModuleList(
-                        [nn.Linear(self.num_features, self.output_sizes[i]).cuda(self.cuda_device) for _ in range(self.num_genes)
-                        ])
+                    prot2gene_layer = BatchedPerGeneLinear(self.num_genes, self.num_features, self.output_sizes[i]).cuda(self.cuda_device)
                     self.final_linear1.append(prot2gene_layer)
                 else:
                     self.final_linear1.append(nn.Linear(self.num_features, self.output_sizes[i]).cuda(self.cuda_device))
@@ -198,14 +194,14 @@ class MutationProjector(nn.Module):
             for s_idx in range(self.num_special_tokens):
                 # no padding
                 if apply_paddings == False:
-                    X_add = self.special_tokenizer[s_idx](X_special_tokens[:,s_idx].cuda(self.cuda_device)).cuda(self.cuda_device)
+                    X_add = self.special_tokenizer[s_idx](X_special_tokens[:,s_idx].cuda(self.cuda_device))
                 # apply padding
                 else:
                     assert type(apply_paddings)==list, 'provide correct "apply_paddings" parameter'
                     apply_padding = False
                     if s_idx in apply_paddings:
                         apply_padding = True
-                    X_add = self.special_tokenizer[s_idx](X_special_tokens[:,s_idx].cuda(self.cuda_device), apply_padding=apply_padding).cuda(self.cuda_device)
+                    X_add = self.special_tokenizer[s_idx](X_special_tokens[:,s_idx].cuda(self.cuda_device), apply_padding=apply_padding)
                 # add embeddings 
                 X_add = torch.unsqueeze(X_add, dim=1)
                 X = torch.cat((X, X_add), dim=1)
@@ -247,10 +243,10 @@ class MutationProjector(nn.Module):
                 max_pool, _ = torch.max(gene_emb, dim=1)
                 min_pool, _ = torch.min(gene_emb, dim=1)
                 mean_pool, max_pool, min_pool = self.Layer_norm(mean_pool), self.Layer_norm(max_pool), self.Layer_norm(min_pool)
-                rep_emb = torch.cat((mean_pool, max_pool, min_pool), dim=1).cuda(self.cuda_device)
+                rep_emb = torch.cat((mean_pool, max_pool, min_pool), dim=1)
             # FFNN
             else:
-                rep_emb = self.FFNN(gene_emb.reshape(gene_emb.shape[0], -1)).cuda(self.cuda_device)
+                rep_emb = self.FFNN(gene_emb.reshape(gene_emb.shape[0], -1))
         
         
         # final linear
@@ -258,27 +254,23 @@ class MutationProjector(nn.Module):
         for task_layer_index, task_layer in enumerate(self.final_linear1):
             # masked gene prediction
             if task_layer_index == self.ssl_task_index:
-                masked_gene_pred = []
-                for gene_idx in range(self.num_genes):
-                    gene_emb2 = X.clone()
-                    gene_emb2 = gene_emb2[:, :self.num_genes]
-                    protein_emb = gene_emb2[:, gene_idx, :]
-                    transformed_emb = self.final_linear1[task_layer_index][gene_idx](protein_emb).cuda(self.cuda_device)
-                    masked_gene_pred.append(transformed_emb)
-                masked_gene_pred = torch.stack(masked_gene_pred, dim=1)
+                # one batched op instead of a per-gene Python loop (each iteration previously
+                # re-cloned the full X tensor even though only a read-only per-gene slice was used)
+                gene_emb2 = X[:, :self.num_genes]
+                masked_gene_pred = self.final_linear1[task_layer_index](gene_emb2)
                 output1.append(masked_gene_pred)
 
             # other tasks
             else:
                 if (self.use_special_token == False) and (self.use_representative_embedding == False):
-                    output1.append(task_layer(self.dropout(gene_emb.reshape(gene_emb.shape[0], -1)).cuda(self.cuda_device)))
+                    output1.append(task_layer(self.dropout(gene_emb.reshape(gene_emb.shape[0], -1))))
 
                 else:
                     if self.use_special_token == True:
-                        out_concat_layer = self.concat_FF_layer(torch.cat((special_token_emb.reshape(special_token_emb.shape[0], -1), rep_emb), dim=1)).cuda(self.cuda_device)
+                        out_concat_layer = self.concat_FF_layer(torch.cat((special_token_emb.reshape(special_token_emb.shape[0], -1), rep_emb), dim=1))
                     else:
-                        out_concat_layer = self.concat_FF_layer(rep_emb).cuda(self.cuda_device)                        
-                    output1.append(task_layer(self.dropout(out_concat_layer).cuda(self.cuda_device)))
+                        out_concat_layer = self.concat_FF_layer(rep_emb)
+                    output1.append(task_layer(self.dropout(out_concat_layer)))
 
         
         # return output
