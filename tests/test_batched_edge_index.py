@@ -50,15 +50,10 @@ def _run_case(num_genes, num_features, num_networks, num_GATblock, batch_size, n
     return X_old, X_new, edges_old, edges_new, attn_old, attn_new
 
 
-def test_output_matches_reference():
+def test_output_edge_index_and_attention_match_reference():
     for case in CASES:
-        X_old, X_new, *_ = _run_case(**case)
+        X_old, X_new, edges_old, edges_new, attn_old, attn_new = _run_case(**case)
         assert torch.allclose(X_old, X_new, atol=1e-5), case
-
-
-def test_edge_index_and_attention_match_reference():
-    for case in CASES:
-        _, _, edges_old, edges_new, attn_old, attn_new = _run_case(**case)
         for key in edges_old:
             assert torch.equal(edges_old[key], edges_new[key]), (case, key)
             assert torch.allclose(attn_old[key], attn_new[key], atol=1e-5), (case, key)

@@ -6,7 +6,6 @@ refactor step where equivalence isn't structurally obvious, so it gets the wides
 corpus of any test in this suite, including deliberately-adversarial exact-boundary values.
 """
 import numpy as np
-import pytest
 import torch
 
 from nn_training_functions import tokenize_special_tokens
@@ -36,42 +35,44 @@ def _values(kind, n, rng):
     raise ValueError(kind)
 
 
-@pytest.mark.parametrize("trial", range(60))
-def test_matches_pandas_cut_across_input_kinds_and_types(trial):
-    rng = np.random.RandomState(trial)
-    num_features = rng.randint(2, 8)
-    num_bins = rng.randint(2, 9)
-    n = rng.randint(1, 40)
-    kind = rng.choice(['normal', 'all_equal', 'ints', 'wide_range', 'single'])
-    arr = _values(kind, n, rng)
-    input_type = rng.choice(['list', 'ndarray', 'tensor'])
-    values = arr.tolist() if input_type == 'list' else (arr if input_type == 'ndarray' else torch.tensor(arr))
+def test_matches_pandas_cut_across_input_kinds_and_types():
+    failures = []
+    for trial in range(60):
+        rng = np.random.RandomState(trial)
+        num_features = rng.randint(2, 8)
+        num_bins = rng.randint(2, 9)
+        n = rng.randint(1, 40)
+        kind = rng.choice(['normal', 'all_equal', 'ints', 'wide_range', 'single'])
+        arr = _values(kind, n, rng)
+        input_type = rng.choice(['list', 'ndarray', 'tensor'])
+        values = arr.tolist() if input_type == 'list' else (arr if input_type == 'ndarray' else torch.tensor(arr))
 
-    new, old = _make_pair(num_features, num_bins, seed=trial)
-    new.eval(); old.eval()
+        new, old = _make_pair(num_features, num_bins, seed=trial)
+        new.eval(); old.eval()
+        with torch.no_grad():
+            out_new = new(values, apply_padding=False)
+            out_old = old(values, apply_padding=False)
+        if not torch.allclose(out_old, out_new, atol=1e-6):
+            failures.append(dict(trial=trial, kind=kind, input_type=input_type))
+    assert failures == []
 
-    with torch.no_grad():
-        out_new = new(values, apply_padding=False)
-        out_old = old(values, apply_padding=False)
 
-    assert torch.allclose(out_old, out_new, atol=1e-6), f"trial={trial} kind={kind} input_type={input_type}"
+def test_matches_pandas_cut_at_exact_bin_boundaries():
+    """Values on a computed bin edge, where torch.linspace and np.linspace can differ by float64 ULPs."""
+    failures = []
+    for trial in range(200):
+        rng = np.random.RandomState(trial)
+        num_bins = rng.randint(2, 12)
+        mn, mx = sorted(rng.uniform(-50, 50, 2))
+        if mx - mn < 1e-6:
+            mx = mn + 1
+        edges = np.linspace(mn, mx, num_bins + 1)
+        vals = np.concatenate([edges, rng.uniform(mn, mx, 10)])
 
-
-@pytest.mark.parametrize("trial", range(200))
-def test_matches_pandas_cut_at_exact_bin_boundaries(trial):
-    """Adversarial: values placed exactly on a computed bin edge, where naive torch.linspace
-    (vs. numpy's) can disagree with pandas by float64 ULPs -- this is why the implementation
-    computes edges via np.linspace rather than torch.linspace."""
-    rng = np.random.RandomState(trial)
-    num_bins = rng.randint(2, 12)
-    mn, mx = sorted(rng.uniform(-50, 50, 2))
-    if mx - mn < 1e-6:
-        mx = mn + 1
-    edges = np.linspace(mn, mx, num_bins + 1)
-    vals = np.concatenate([edges, rng.uniform(mn, mx, 10)])
-
-    new, old = _make_pair(num_features=3, num_bins=num_bins, seed=trial)
-    with torch.no_grad():
-        out_new = new(vals, apply_padding=False)
-        out_old = old(vals, apply_padding=False)
-    assert torch.allclose(out_old, out_new, atol=1e-6), f"trial={trial}"
+        new, old = _make_pair(num_features=3, num_bins=num_bins, seed=trial)
+        with torch.no_grad():
+            out_new = new(vals, apply_padding=False)
+            out_old = old(vals, apply_padding=False)
+        if not torch.allclose(out_old, out_new, atol=1e-6):
+            failures.append(dict(trial=trial, num_bins=num_bins))
+    assert failures == []
