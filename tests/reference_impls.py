@@ -1,9 +1,4 @@
-"""
-Pre-refactor ("old") reference implementations, kept only for equivalence testing against
-the refactored src/ code. These are frozen copies of the original algorithms (per-gene Python
-loops, PyG Data/DataLoader construction, pandas GATidx lookup, pd.cut binning) -- do not "fix"
-them to match src/; their whole purpose is to be the un-refactored baseline.
-"""
+"""Frozen pre-refactor implementations, the baseline for the equivalence tests. Do not change them to match src/."""
 import copy
 from collections import defaultdict
 from itertools import product

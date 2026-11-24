@@ -118,24 +118,23 @@ against the actual shipped checkpoint:
 ## Test suite (`tests/`)
 
 Run with `pytest tests/` from the repo root (`pytest.ini` wires `src/` and `tests/` onto
-`sys.path`). Fast tests (~300, a few seconds) run by default; full-scale tests are marked
-`@pytest.mark.slow` and require the real checkpoint/network/data files that ship with the repo:
+`sys.path`). The slow test is marked `@pytest.mark.slow` and uses the checkpoint, network and
+test_sample files tracked in the repo.
 
 | File | Covers |
 |---|---|
-| `conftest.py` | Shared fixtures: CPU-only `.cuda()` monkeypatch (no GPU in CI), seeded RNG, tiny synthetic model config |
-| `reference_impls.py` | Frozen pre-refactor implementations used as the equivalence baseline everywhere else |
-| `test_convert_mutations.py` | Item 2, incl. the bit-order assumption |
+| `conftest.py` | `.cuda()` no-op for the old code, seeded RNG, tiny model config and builders |
+| `reference_impls.py` | Frozen pre-refactor implementations, the equivalence baseline |
+| `test_convert_mutations.py` | Item 2 |
 | `test_return_mut_embedding.py` | Item 1, incl. masking edge cases |
-| `test_gatidx_indexing.py` | Item 3's arithmetic-index invariant |
 | `test_batched_edge_index.py` | Items 3+4, incl. the `compute_attention.py` downstream consumer |
-| `test_special_token_binning.py` | Item 5, incl. 200+ exact-boundary adversarial cases |
-| `test_padding_bug_documented.py` | Item 6, characterization/tripwire test |
+| `test_special_token_binning.py` | Item 5, incl. 200 exact-boundary trials |
+| `test_padding_bug_documented.py` | Item 6 tripwire |
 | `test_batched_per_gene_linear.py` | Item 8 core numerics |
-| `test_state_dict_adapter.py` | Item 8 checkpoint bridge, incl. idempotency on already-new-format keys |
+| `test_state_dict_adapter.py` | Item 8 checkpoint bridge, incl. passthrough of new-format keys |
 | `test_full_model_equivalence.py` | Full model, 4 config branches (covers item 7 too) |
+| `test_device_utils.py` | Legacy int device index, MPS float64 downcast (MPS test runs only on Apple Silicon) |
 | `test_end_to_end_checkpoint.py` *(slow)* | Real 468-gene checkpoint, real data |
-| `test_timing_regression.py` *(slow)* | Synthetic + real-checkpoint speedup check |
 
 Nothing outside `src/`, `tests/`, and `pytest.ini` was changed; `pretrained_model.pth` itself is
 untouched.

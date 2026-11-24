@@ -29,8 +29,7 @@ def test_matches_reference_loop_no_masking():
 
 
 def test_matches_reference_loop_with_explicit_masking():
-    # test_geneset accepts an explicit list of gene indices to mask (deterministic, no RNG),
-    # so both old and new see identical masked positions.
+    # An explicit gene list masks without RNG, so old and new mask the same positions.
     for trial in range(15):
         rng = random.Random(trial + 500)
         num_genes = rng.randint(5, 25)

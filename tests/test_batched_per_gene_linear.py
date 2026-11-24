@@ -1,8 +1,4 @@
-"""
-Item 8 (core numerics): BatchedPerGeneLinear (one torch.einsum) vs. a reference
-nn.ModuleList([nn.Linear(...) for _ in range(num_genes)]) applied via a per-gene Python loop,
-given identical per-gene weights.
-"""
+"""BatchedPerGeneLinear (one einsum) vs. a per-gene loop over nn.Linear with the same weights."""
 import torch
 import torch.nn as nn
 

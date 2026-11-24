@@ -52,8 +52,7 @@ def test_output_edge_index_and_attention_match_reference():
 
 
 def test_compute_attention_consumer_matches_reference():
-    # compute_attention.py assumes edge_index encodes sample_idx via node_idx // num_genes;
-    # this is the actual downstream consumer of the batching-order convention item 4 relies on.
+    # compute_attention.py reads sample_idx as node_idx // num_genes from edge_index.
     import numpy as np
     for case in CASES:
         num_genes, batch_size = case['num_genes'], case['batch_size']
