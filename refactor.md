@@ -133,6 +133,7 @@ test_sample files tracked in the repo.
 | `test_full_model_equivalence.py` | Full model, 4 config branches (covers item 7 too) |
 | `test_device_utils.py` | Legacy int device index, MPS float64 downcast (MPS test runs only on Apple Silicon) |
 | `test_end_to_end_checkpoint.py` *(slow)* | Real 468-gene checkpoint, real data |
+| `test_mp2_cohort.py` | MP2 cohort conversion, fixed bin edges, per-sample covariate padding. The slow test checks that Run B reproduces Run A on test_sample |
 
 Nothing outside `src/`, `tests/`, and `pytest.ini` was changed; `pretrained_model.pth` itself is
 untouched.

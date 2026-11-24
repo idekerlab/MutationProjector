@@ -156,13 +156,18 @@ class MutationProjector(nn.Module):
                 
 
             
-    def forward(self, X, X_special_tokens=[], test_geneset=False, return_attention_weights=False, apply_paddings=False):
+    def forward(self, X, X_special_tokens=[], test_geneset=False, return_attention_weights=False, apply_paddings=False,
+                special_token_edges=None, X_special_missing=None, return_embeddings=False):
         '''
         X: tokenized mutation profiles. (N_samples, N_genes)
         X_special_input: input for special tokens (N_samples, N_signatures). Give numpy or tensor
         test_geneset: False (default. does not mask genes). list (mask at input index positions)
         return_attention_weights: False (default). Returns attention weights if True
         apply_paddings: False (default). list of indices (within special tokens) to apply padding
+        special_token_edges: None (default: per-batch edges). Else a list of (num_bins+1,) edge arrays, one per special token
+        X_special_missing: None (default). Else (N_samples, N_special_tokens) bool. True entries get the zero token
+        return_embeddings: False (default). If True and return_attention_weights is False, the third output is
+            (gene_emb, cov_emb, rep_emb, out_concat_layer)
         
         
         ##---------------
@@ -195,7 +200,9 @@ class MutationProjector(nn.Module):
             for s_idx in range(self.num_special_tokens):
                 # no padding
                 if apply_paddings == False:
-                    X_add = self.special_tokenizer[s_idx](to_device_safe(X_special_tokens[:,s_idx], self.cuda_device))
+                    edges = None if special_token_edges is None else special_token_edges[s_idx]
+                    missing = None if X_special_missing is None else X_special_missing[:, s_idx]
+                    X_add = self.special_tokenizer[s_idx](to_device_safe(X_special_tokens[:,s_idx], self.cuda_device), edges=edges, missing=missing)
                 # apply padding
                 else:
                     assert type(apply_paddings)==list, 'provide correct "apply_paddings" parameter'
@@ -276,6 +283,8 @@ class MutationProjector(nn.Module):
         
         # return output
         if return_attention_weights==False:
+            if return_embeddings:
+                return output1, masked_positions, (gene_emb, cov_emb, rep_emb, out_concat_layer)
             return output1, masked_positions, gene_emb
         else:
             return output1, masked_positions, attention_weights, edge_indices, (gene_emb, cov_emb, rep_emb, out_concat_layer)

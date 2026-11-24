@@ -30,6 +30,21 @@ class transform_layer(nn.Module):
         return self.DF_linear(data_values.to(self.cuda_device))
 
     
+def bin_edges(mn, mx, num_bins):
+    '''
+    Returns (num_bins+1,) float64 edges for equal-width bins over [mn, mx], as pd.cut(bins=int)
+    computes them: the lower edge moves down by 0.1% of the range, and a zero range widens
+    by 0.1% on both sides. Bins are right-closed.
+    '''
+    if mn == mx:
+        adj_mn = mn - (0.001 * abs(mn) if mn != 0 else 0.001)
+        adj_mx = mx + (0.001 * abs(mx) if mx != 0 else 0.001)
+        return np.linspace(adj_mn, adj_mx, num_bins + 1)
+    edges = np.linspace(mn, mx, num_bins + 1)
+    edges[0] -= (mx - mn) * 0.001
+    return edges
+
+
 ## tokenize special tokens
 class tokenize_special_tokens(nn.Module):
     def __init__(self, num_features, num_bins, cuda_device):
@@ -41,7 +56,13 @@ class tokenize_special_tokens(nn.Module):
         # generate embedding layer
         self.token_emb = nn.Embedding(self.num_bins, self.num_features).to(self.cuda_device)
         
-    def forward(self, values, apply_padding=False):
+    def forward(self, values, apply_padding=False, edges=None, missing=None):
+        '''
+        values: (batch,) covariate values.
+        edges: optional (num_bins+1,) float64 bin edges from bin_edges(). None computes the edges
+            from this batch's min and max (pd.cut(bins=int) behavior).
+        missing: optional (batch,) bool. True rows get the zero vector, the padding-path output.
+        '''
         # normalize input to a CPU float64 tensor (matches pandas' internal float64 bin-edge
         # math). Deliberately stays on CPU for this whole computation, regardless of
         # self.cuda_device: MPS (Apple Silicon) doesn't support float64 at all, and this is
@@ -54,23 +75,19 @@ class tokenize_special_tokens(nn.Module):
 
         # return embeddings
         if apply_padding == False:
-            # bin values: replicates pandas.cut(bins=int)'s adaptive equal-width binning
-            # (min/max of this call's values, 0.1%-of-range edge widening, right-closed
-            # intervals) exactly, but without round-tripping the whole array through
-            # GPU->CPU->pandas->GPU -- only the num_bins+1 edge scalars touch numpy.
-            mn = values_t.min().item()
-            mx = values_t.max().item()
-            if mn == mx:
-                adj_mn = mn - (0.001 * abs(mn) if mn != 0 else 0.001)
-                adj_mx = mx + (0.001 * abs(mx) if mx != 0 else 0.001)
-                edges_np = np.linspace(adj_mn, adj_mx, self.num_bins + 1)
-            else:
-                edges_np = np.linspace(mn, mx, self.num_bins + 1)
-                edges_np[0] -= (mx - mn) * 0.001
-            boundaries = torch.from_numpy(edges_np[1:-1])
+            if edges is None:
+                edges = bin_edges(values_t.min().item(), values_t.max().item(), self.num_bins)
+            if missing is not None:
+                missing = torch.as_tensor(missing, dtype=torch.bool).cpu()
+                # missing rows may hold NaN. Any in-range value works, because the row is zeroed below.
+                values_t = torch.where(missing, torch.tensor(edges[0], dtype=torch.float64), values_t)
+            boundaries = torch.as_tensor(np.asarray(edges)[1:-1], dtype=torch.float64)
             binned = torch.bucketize(values_t, boundaries, right=False)
             # return embeddings
             out_emb = self.token_emb(binned.to(self.cuda_device))
+            if missing is not None:
+                keep = (~missing).to(self.cuda_device)
+                out_emb = out_emb * keep.unsqueeze(1).to(out_emb.dtype)
         elif apply_padding == True:
             # NOTE (pre-existing bug, out of scope for this refactor, flagged not fixed):
             # padding_emb is instantiated fresh on every call instead of being a persistent
