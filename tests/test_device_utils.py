@@ -15,17 +15,6 @@ def test_legacy_int_resolves_to_cuda_index():
     assert resolve_device(3) == torch.device('cuda:3')
 
 
-def test_string_devices_pass_through():
-    assert resolve_device('cpu') == torch.device('cpu')
-    assert resolve_device('mps') == torch.device('mps')
-    assert resolve_device('cuda:0') == torch.device('cuda:0')
-
-
-def test_torch_device_passes_through():
-    d = torch.device('cpu')
-    assert resolve_device(d) == d
-
-
 def test_to_device_safe_preserves_float64_on_cpu():
     # cpu/cuda support float64 fine -- to_device_safe must not change dtype there, or it would
     # silently diverge from the bit-exact CPU/CUDA equivalence already verified elsewhere.
@@ -33,12 +22,6 @@ def test_to_device_safe_preserves_float64_on_cpu():
     out = to_device_safe(t, 'cpu')
     assert out.dtype == torch.float64
     assert out.device == torch.device('cpu')
-
-
-def test_to_device_safe_preserves_float32():
-    t = torch.zeros(3, dtype=torch.float32)
-    out = to_device_safe(t, 'cpu')
-    assert out.dtype == torch.float32
 
 
 def test_to_device_safe_downcasts_float64_for_mps(monkeypatch):

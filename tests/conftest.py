@@ -52,10 +52,3 @@ def make_network_edges(num_genes, num_networks, generator=None):
         dst = torch.randint(0, num_genes, (num_genes,), generator=generator)
         edges.append(torch.stack([src, dst], dim=0))
     return edges
-
-
-def assert_allclose(old, new, rtol=1e-4, atol=1e-6, msg=""):
-    __tracebackhide__ = True
-    if not torch.allclose(old, new, rtol=rtol, atol=atol):
-        max_diff = (old - new).abs().max().item()
-        raise AssertionError(f"{msg} allclose failed: max diff = {max_diff:.3e} (rtol={rtol}, atol={atol})")

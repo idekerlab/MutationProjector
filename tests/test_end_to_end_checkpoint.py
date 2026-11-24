@@ -9,7 +9,6 @@ Also cross-checks against the checked-in prediction_results/test_sample/*.pt ref
 Requires the real checkpoint/network/data files that ship with this repo -- skipped
 automatically if they're not present (e.g. a checkout with Git LFS / large files excluded).
 """
-import time
 from pathlib import Path
 
 import pandas as pd
@@ -54,7 +53,7 @@ def test_real_checkpoint_matches_reference_end_to_end():
     hp = _production_hparams(network_edges)
 
     old_model = OldMutationProjector(**hp)
-    result = old_model.load_state_dict(tmp, strict=True)
+    old_model.load_state_dict(tmp, strict=True)
     old_model.eval()
 
     new_model = NewMutationProjector(**hp)

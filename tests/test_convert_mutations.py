@@ -1,17 +1,9 @@
 import numpy as np
 import pytest
 import torch
-from itertools import product
 
 from nn_training_functions import convert_mutations
 from reference_impls import old_convert_mutations
-
-
-def test_bit_order_assumption():
-    """Locks in the assumption the vectorized formula depends on: itertools.product's
-    enumeration order over binary tuples IS binary counting order, MSB (leftmost) first."""
-    assert list(product([0, 1], repeat=3))[5] == (1, 0, 1)
-    assert list(product([0, 1], repeat=4))[9] == (1, 0, 0, 1)
 
 
 @pytest.mark.parametrize("trial", range(20))

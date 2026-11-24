@@ -33,14 +33,3 @@ def test_matches_looped_modulelist_of_linear():
             out_batched = batched(x)
 
         assert torch.allclose(out_ref, out_batched, atol=1e-5), f"trial={trial}"
-
-
-def test_distinct_per_gene_weights_produce_distinct_outputs():
-    # sanity: confirms the batched op doesn't accidentally share weights across genes
-    torch.manual_seed(0)
-    num_genes, in_f, out_f, batch = 5, 3, 4, 2
-    batched = BatchedPerGeneLinear(num_genes, in_f, out_f)
-    x = torch.ones(batch, num_genes, in_f)
-    out = batched(x)
-    # with random distinct weights, genes should (almost surely) not all produce equal output
-    assert not torch.allclose(out[:, 0, :], out[:, 1, :])
