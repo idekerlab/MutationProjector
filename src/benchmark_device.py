@@ -190,6 +190,9 @@ def main():
                          help="skip the pre-refactor code comparison, only benchmark new code across --devices")
     parser.add_argument('--skip-train-step', action='store_true',
                          help="only benchmark forward-pass inference, skip forward+backward+optimizer.step()")
+    parser.add_argument('--dataset-dir', default='eval_dataset/test_sample',
+                         help="path under data/downstream_data/ holding mut.txt/cna.txt/cnd.txt/covariates.txt "
+                              "(default: eval_dataset/test_sample, the shipped 20-sample synthetic set)")
     args = parser.parse_args()
     include_train_step = not args.skip_train_step
 
@@ -197,7 +200,7 @@ def main():
     network_edges = [torch.load(FI_DIR / 'data' / 'networks' / f'{n}.pt', map_location='cpu') for n in networks]
     checkpoint = torch.load(FI_DIR / 'pretrained_model' / 'pretrained_model.pth', map_location='cpu')
 
-    path_data = FI_DIR / 'data' / 'downstream_data' / 'eval_dataset' / 'test_sample'
+    path_data = FI_DIR / 'data' / 'downstream_data' / args.dataset_dir
     mdf = pd.read_csv(path_data / 'mut.txt', sep='\t')
     cna = pd.read_csv(path_data / 'cna.txt', sep='\t')
     cnd = pd.read_csv(path_data / 'cnd.txt', sep='\t')
