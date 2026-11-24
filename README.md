@@ -1,8 +1,8 @@
 # MutationProjector
-MutationProjector is a neural network that translates clinical gene panels into a foundational representation of tumors. This is a tumor mutation-based foundation model that predicts cancer therapeutic response and metastasis. The model incorporates multiple molecular interaction networks. 
+MutationProjector is a tumor mutation-based foundation model. It translates clinical gene panels into a representation of tumors and predicts cancer therapeutic response and metastasis. The model incorporates eight molecular interaction networks. 
 
 ## :compass: Overview of pre-training MutationProjector
-To pre-train MutationProjector, we used large-scale genomic alteration data, histopathology images and multiple molecular interaction networks. Simplified overview of the approach is visualized below:
+To pre-train MutationProjector, we used large-scale genomic alteration data, histopathology images and multiple molecular interaction networks. The figure below summarizes the approach:
 ![Screenshot](./Figures/Figure1.jpg)
 
 ## :rocket: Environment set up
@@ -16,7 +16,7 @@ MutationProjector requires the following environment:
 
 ## :rocket: Protein interaction graphs
 Protein interaction graphs are available in `/data/networks`.  
-All of the networks used in this study are available on NDEx (Network Data Exchange).
+All networks used in this study are on NDEx (Network Data Exchange).
 - DNA Damage Repair: [DDRAM](https://www.ndexbio.org/viewer/networks/748395aa-0abd-11ec-b666-0ac135e8bacf)
 - all other networks (7 networks in total): [MutationProjector NDEx](https://www.ndexbio.org/#/networkset/c84a818c-252c-11f0-9806-005056ae3c32?accesskey=503563dfc8742d58e96b755a1355978a0ca8a9d4737bfd403fc2ebabe51780e3)
 
@@ -30,8 +30,7 @@ All of the networks used in this study are available on NDEx (Network Data Excha
 
 
 ## :file_folder: Required input files for downstream tasks
-Make sure to create a folder under `/data/downstream_data/train_dataset` and/or `/data/downstream_data/eval_dataset`, depending on your task.
-Also, make sure that you have all the tab-delimited files under the folder created above. 
+Create a folder under `/data/downstream_data/train_dataset`, `/data/downstream_data/eval_dataset`, or both, depending on your task. Put these tab-delimited files in it:
 1. *mut.txt*
 2. *cna.txt*
 3. *cnd.txt*
@@ -40,11 +39,11 @@ Also, make sure that you have all the tab-delimited files under the folder creat
 
 For `outcomes.txt` file, include two columns, `sample` and `outcomes` (if trying to transfer learn on a specific task). `outcomes` column should contain binary outcome label (either 0 or 1). 
 
-Example files are under `./data/downstream_data/train_dataset/sample` and `./data/downstream_data/eval_dataset/test_sample` folders (note that these are synthetic data).
+Example files are under `./data/downstream_data/train_dataset/sample` and `./data/downstream_data/eval_dataset/test_sample` folders (these are synthetic data).
 
 
 ### :gear: Code for generating the input files for TMB, aneuploidy and mutational signatures
-All codes related to generating the input files for TMB and mutational signatures are available under `./src` folder.
+The code that generates the TMB and mutational signature input files is in `./src`.
 For generating aneuploidy, please use [ASCETS](https://github.com/beroukhim-lab/ascets)
 1. *calculate_TMB.R* : calculates TMB from MAF (Mutation Annotation Format) files using [Maftools](https://www.bioconductor.org/packages/release/bioc/html/maftools.html)
 2. *mutation_signatures-compute_SBS.py* : compute mutation signatures from MAF files using [SigProfiler](https://cancer.sanger.ac.uk/signatures/tools/)

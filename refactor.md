@@ -3,7 +3,7 @@
 ## Context
 
 `MutationProjector`'s GATv2 graph encoder (`src/GATv2_functions.py`) and tokenizer
-(`src/nn_training_functions.py`) were slow because of implementation choices in the encoder and tokenizer: per-gene Python loops calling hundreds of individual
+(`src/nn_training_functions.py`) were slow because of per-gene Python loops calling hundreds of individual
 `nn.Linear` modules, PyG `Data`/`DataLoader` objects rebuilt from scratch on every forward call
 despite static graph topology, a pandas `.loc` lookup and a `pd.cut` round-trip sitting inside
 hot loops, and pure-Python per-element loops in mutation tokenization. One unrelated correctness
@@ -66,21 +66,21 @@ for a no-semantic-change refactor. It's documented in code and pinned by a chara
 (see below) so a future change can't silently alter this behavior.
 
 Note found during testing: because `num_embeddings=1` and `padding_idx=0`, PyTorch always zeroes
-that single embedding row regardless of random seed. So in practice this bug produces a padding embedding that stays at
+that single embedding row regardless of random seed. So this bug produces a padding embedding that stays at
 zero and never trains.
 
 ### 7. Removed confirmed-redundant `.cuda()` calls
-Some call sites in `MutationProjector_nn.py` and `nn_training_functions.py` called
-`.cuda(self.cuda_device)` on tensors that were already guaranteed to be on that device (e.g. the
-output of a submodule whose weights are already on `cuda_device`). Only sites confirmed redundant
-by tracing the tensor's origin were touched; ambiguous ones were left alone.
+Commit 7388522 removed a net 10 `.cuda()` calls (9 in `MutationProjector_nn.py`, 1 in
+`nn_training_functions.py`), some of them as part of items 1 and 2. The removed calls moved tensors
+that were already on `cuda_device`, for example the output of a submodule whose weights are on
+`cuda_device`. We traced each tensor's origin and left the ambiguous sites unchanged.
 
 ### 8. Per-gene `Linear` → `BatchedPerGeneLinear`
 The highest-risk change. `GATv2block.linear_layers`/`FF_layer1`/`FF_layer2` and
 `MutationProjector`'s SSL head `prot2gene_layer` were each a `nn.ModuleList` of up to 468
-independent `nn.Linear` layers, applied via a Python loop (one tiny GEMM per gene). Also removed
-an `X.clone()` that was redundantly re-cloning the full tensor on every one of those 468
-iterations even though only a read-only per-gene slice was used.
+independent `nn.Linear` layers, applied via a Python loop (one tiny GEMM per gene). We also removed
+an `X.clone()` that copied the full tensor in each of the 468 iterations, although the loop read
+only a per-gene slice.
 
 Replaced with `BatchedPerGeneLinear` (`src/GATv2_functions.py`): a single `nn.Parameter` of shape
 `(num_genes, out_features, in_features)` (+ bias), computed via one
@@ -97,7 +97,7 @@ the checkpoint file. It translates the keys only at load time. `src/load_model.p
 
 ## Verification
 
-Everything was checked against frozen pre-refactor reference implementations
+We checked everything against frozen pre-refactor reference implementations
 (`tests/reference_impls.py`) with randomized equivalence tests, plus a real end-to-end run
 against the actual shipped checkpoint:
 
@@ -164,7 +164,7 @@ device-agnostic:
 
 ### Testing the speedup on Apple Silicon (M-series GPU / unified memory)
 
-1. **Environment** (native `uv` venv, not the CUDA-pinned `conda-envs/env.yml`):
+1. **Environment** (native `uv` venv. `conda-envs/env.yml` pins CUDA and does not apply on macOS):
    ```
    uv venv .venv && source .venv/bin/activate
    uv pip install torch  # macOS wheels include MPS support out of the box
@@ -187,4 +187,4 @@ device-agnostic:
 4. If you hit "operator not implemented for MPS" errors: some PyTorch/PyG ops still have gaps
    in MPS coverage depending on your PyTorch version. Set
    `PYTORCH_ENABLE_MPS_FALLBACK=1` as an environment variable to let those specific ops
-   fall back to CPU automatically rather than crashing (the rest still runs on MPS).
+   fall back to CPU automatically. The rest still runs on MPS.
