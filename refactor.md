@@ -6,8 +6,8 @@
 (`src/nn_training_functions.py`) were slow because of per-gene Python loops calling up to 468 individual
 `nn.Linear` modules, PyG `Data`/`DataLoader` objects rebuilt from scratch on every forward call
 despite static graph topology, a pandas `.loc` lookup and a `pd.cut` round-trip sitting inside
-hot loops, and pure-Python per-element loops in mutation tokenization. One unrelated correctness
-bug (an untrained `nn.Embedding` re-created every call in a padding path) was found during the refactor.
+hot loops, and pure-Python per-element loops in mutation tokenization. During the refactor we found
+one unrelated correctness bug: a padding path re-creates an untrained `nn.Embedding` on every call.
 
 This refactor changes performance only: identical architecture, identical per-gene
 distinct-weight semantics, identical output values (within float tolerance), verified against
@@ -47,8 +47,8 @@ Zero PyG `Data`/`DataLoader` objects touched per forward call.
 ### 5. `src/nn_training_functions.py`: replaced `pd.cut` with `torch.bucketize`
 Removed a GPU→CPU→pandas→GPU round-trip in `tokenize_special_tokens.forward`. `pd.cut(bins=int)`
 computes **adaptive, batch-dependent** bin edges (min/max of the current input, widened by 0.1%
-of the range, right-closed intervals). The new code replicates this exactly with `np.linspace` (not
-`torch.linspace`, see the note below) plus `torch.bucketize`, sending only the tiny `num_bins+1`
+of the range, right-closed intervals). The new code replicates this exactly with `np.linspace`
+(see the note below) plus `torch.bucketize`, sending only the tiny `num_bins+1`
 edge array through numpy instead of the whole batch.
 
 > During verification, `torch.linspace` and `np.linspace` were found to
@@ -127,9 +127,9 @@ test_sample files tracked in the repo.
 | `test_return_mut_embedding.py` | Item 1, incl. masking edge cases |
 | `test_batched_edge_index.py` | Items 3+4, incl. the `compute_attention.py` downstream consumer |
 | `test_special_token_binning.py` | Item 5, incl. 200 exact-boundary trials |
-| `test_padding_bug_documented.py` | Item 6 tripwire |
+| `test_padding_bug_documented.py` | Item 6 characterization test |
 | `test_batched_per_gene_linear.py` | Item 8 core numerics |
-| `test_state_dict_adapter.py` | Item 8 checkpoint bridge, incl. passthrough of new-format keys |
+| `test_state_dict_adapter.py` | Item 8 checkpoint key translation, incl. passthrough of new-format keys |
 | `test_full_model_equivalence.py` | Full model, 4 config branches (covers item 7 too) |
 | `test_device_utils.py` | Legacy int device index, MPS float64 downcast (MPS test runs only on Apple Silicon) |
 | `test_end_to_end_checkpoint.py` *(slow)* | Real 468-gene checkpoint, real data |

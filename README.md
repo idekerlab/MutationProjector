@@ -5,7 +5,7 @@ MutationProjector is a tumor mutation-based foundation model. It translates clin
 To pre-train MutationProjector, we used large-scale genomic alteration data, histopathology images and multiple molecular interaction networks. The figure below summarizes the approach:
 ![Screenshot](./Figures/Figure1.jpg)
 
-## Environment set up
+## Environment setup
 MutationProjector requires the following environment:
 - GPU server with CUDA>=11 installed
 - Python >= 3.6
@@ -14,8 +14,8 @@ MutationProjector requires the following environment:
 - To install all dependencies, use the following command:
 `conda env create -f ./conda-envs/env.yml`
 
-## Protein interaction networks
-Protein interaction networks are available in `/data/networks`.  
+## Molecular interaction networks
+Molecular interaction networks are available in `/data/networks`.  
 All networks used in this study are on NDEx (Network Data Exchange).
 - DNA Damage Repair: [DDRAM](https://www.ndexbio.org/viewer/networks/748395aa-0abd-11ec-b666-0ac135e8bacf)
 - all other networks (7 networks in total): [MutationProjector NDEx](https://www.ndexbio.org/#/networkset/c84a818c-252c-11f0-9806-005056ae3c32?accesskey=503563dfc8742d58e96b755a1355978a0ca8a9d4737bfd403fc2ebabe51780e3)
@@ -173,7 +173,7 @@ Please cite the **MutationProjector** paper if using this repo:
 ### 1. `MutationProjector`  
 - *bioRxiv*: Kong, JungHo, et al. "Translating clinical gene sequencing into a foundational representation of tumor subtype." bioRxiv (2025): 2025-09.  
 
-If using protein interaction networks or other tools, please cite the papers below:  
+If using molecular interaction networks or other tools, please cite the papers below:  
 ### 2. `Networks`
 - *BioPlex*: Huttlin, E. L. et al. Dual proteome-scale networks reveal cell-specific remodeling of the human interactome. Cell 184, 3022–3040.e28 (2021)
 - *SIGNOR*: Lo Surdo, P. et al. SIGNOR 3.0, the SIGnaling network open resource 3.0: 2022 update. Nucleic Acids Res 51, D631–D637 (2023)
