@@ -32,3 +32,11 @@ prediction_results/tcga2/
 
 # Ignore code for generating synthetic data
 data/sample/generate_sample_data.ipynb
+
+# Local-only data and outputs
+private_data/
+data/downstream_data/train_dataset/msk_impact_2017/
+data/downstream_data/train_dataset/msk_met_2021/
+notebooks/__marimo__/
+gene_module_results/
+.DS_Store

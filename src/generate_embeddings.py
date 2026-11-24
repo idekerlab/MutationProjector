@@ -9,7 +9,7 @@ from sklearn.metrics import *
 from sklearn.ensemble import *
 from sklearn.linear_model import *
 from itertools import *
-import os, time, sys, random
+import os, time, sys, random, json
 from tqdm import tqdm
 from pathlib import Path
 import argparse
@@ -25,6 +25,8 @@ from nn_training_functions import *
 from import_network import *
 from nn_training_functions import *
 from MutationProjector_nn import *
+from load_model import adapt_legacy_state_dict
+from device_utils import resolve_device
 
 def gen_embedding():
     #############################################
@@ -148,6 +150,7 @@ def embed_from_pretrained(pretrained_model, dataset,
         return lists
 
     ## Generate embeddings
+    cuda_device = resolve_device(cuda_device)
     # padding
     padding_info = {'IMvigor210':list(np.arange(1, 9)),
                 'mel_dfci_2019':[1],
@@ -155,10 +158,10 @@ def embed_from_pretrained(pretrained_model, dataset,
     if len(padding_idx) > 0:
         padding_info[dataset] = padding_idx
     # embeddings
-    Gene_emb = torch.tensor([]).cuda(cuda_device)
-    Rep_emb = torch.tensor([]).cuda(cuda_device)
-    Cov_emb = torch.tensor([]).cuda(cuda_device)
-    Final_emb = torch.tensor([]).cuda(cuda_device)
+    Gene_emb = torch.tensor([]).to(cuda_device)
+    Rep_emb = torch.tensor([]).to(cuda_device)
+    Cov_emb = torch.tensor([]).to(cuda_device)
+    Final_emb = torch.tensor([]).to(cuda_device)
     # X2_test
     X_test = gData[dataset]
     X_special = torch.tensor(sData[dataset].set_index('sample').values)
@@ -172,9 +175,9 @@ def embed_from_pretrained(pretrained_model, dataset,
     output_sizes = [3, 10, 3]
 
     ## load model
-    tmp = torch.load('%s/%s'%(dir_pretrained, model_name))
+    tmp = torch.load('%s/%s'%(dir_pretrained, model_name), map_location='cpu')
     pretrained_model = MutationProjector(num_genes, num_features, network_edges, num_GATblock, num_heads, dropout_p, cuda_device, output_sizes, mask_percentage, input_genes, dff, use_representative_embedding=use_rep, ssl_task_index=0, use_special_token=use_special_tokens, num_special_tokens=num_special_tokens, num_bins=num_bins2, use_pooling=use_pooling)
-    pretrained_model.load_state_dict(tmp)
+    pretrained_model.load_state_dict(adapt_legacy_state_dict(pretrained_model, tmp))
 
     ## padding
     apply_paddings = False
@@ -211,6 +214,40 @@ def embed_from_pretrained(pretrained_model, dataset,
     torch.save(Final_emb, f'{out_path}/final_layer_emb.pt')
     #####################################
 
-    
+
+
+def embed_cohort(model, X_converted, X_special, cov_missing, edges, out_dir, batch_size=256):
+    '''
+    Runs model in eval mode over all rows and writes float32 .npy files to out_dir, in row order:
+    gene_emb (N, num_genes, F), cov_emb (N, num_special_tokens, F), rep_emb (N, R), final_layer_emb (N, F).
+    X_converted: (N, num_genes) int tokens. X_special: (N, num_special_tokens) float, NaN where missing.
+    cov_missing: (N, num_special_tokens) bool. edges: one (num_bins+1,) array per special token.
+    Writes done.json last, with the row count.
+    '''
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    n = X_converted.shape[0]
+    device = model.cuda_device
+    outputs = None
+    model.eval()
+    with torch.no_grad():
+        for start in range(0, n, batch_size):
+            stop = min(start + batch_size, n)
+            X1 = torch.as_tensor(X_converted[start:stop], dtype=torch.long).to(device)
+            X2 = torch.as_tensor(X_special[start:stop], dtype=torch.float64)
+            missing = torch.as_tensor(cov_missing[start:stop], dtype=torch.bool)
+            _, _, embs = model(X1, X2, test_geneset=False, return_attention_weights=False, apply_paddings=False,
+                               special_token_edges=edges, X_special_missing=missing, return_embeddings=True)
+            gene_emb, cov_emb, rep_emb, final_emb = (e.float().cpu().numpy() for e in embs)
+            if outputs is None:
+                outputs = {name: np.lib.format.open_memmap(out_dir / f'{name}.npy', mode='w+', dtype=np.float32, shape=(n,) + e.shape[1:])
+                           for name, e in (('gene_emb', gene_emb), ('cov_emb', cov_emb), ('rep_emb', rep_emb), ('final_layer_emb', final_emb))}
+            for name, e in (('gene_emb', gene_emb), ('cov_emb', cov_emb), ('rep_emb', rep_emb), ('final_layer_emb', final_emb)):
+                outputs[name][start:stop] = e
+    for array in outputs.values():
+        array.flush()
+    (out_dir / 'done.json').write_text(json.dumps({'n_rows': int(n), 'batch_size': batch_size}))
+
+
 if __name__ == '__main__':
     gen_embedding()

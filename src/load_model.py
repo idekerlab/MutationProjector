@@ -8,7 +8,7 @@ from sklearn.metrics import *
 from sklearn.ensemble import *
 from sklearn.linear_model import *
 from itertools import *
-import os, time, sys, random, joblib
+import os, time, sys, random, joblib, re
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import seaborn as sns
@@ -24,9 +24,90 @@ from MutationProjector_nn import *
 from GATv2_functions import *
 
 
+# Regexes matching the pre-refactor checkpoint's per-gene ModuleList-of-Linear keys and its
+# flat nn.Sequential GAT_layers keys.
+_PER_GENE_STACK_RE = re.compile(r'^(GATblock\.(?:linear_layers|FF_layer1|FF_layer2))\.(\d+)\.(weight|bias)$')
+_SSL_HEAD_STACK_RE = re.compile(r'^(final_linear1\.\d+)\.(\d+)\.(weight|bias)$')
+_GAT_LAYERS_FLAT_RE = re.compile(r'^GATblock\.GAT_layers\.(\d+)\.conv1\.(.+)$')
 
 
-def load_MutationProjector():
+def adapt_legacy_state_dict(model, legacy_state_dict):
+    '''
+    Translates a state_dict saved from the pre-refactor MutationProjector (per-gene
+    nn.ModuleList-of-nn.Linear parameters for GATblock.linear_layers/FF_layer1/FF_layer2 and
+    the SSL head's prot2gene_layer, plus a flat nn.Sequential GAT_layers indexed by
+    i*num_networks+j) into the shapes expected by the current batched/2D-indexed
+    architecture (BatchedPerGeneLinear stacked weights, GAT_layers[i][j] nesting).
+    The checkpoint file itself is never modified, only translated at load time.
+    '''
+    num_networks = len(model.GATblock.GAT_layers[0])
+
+    grouped = {}
+    new_state_dict = {}
+
+    for key, value in legacy_state_dict.items():
+        m = _PER_GENE_STACK_RE.match(key) or _SSL_HEAD_STACK_RE.match(key)
+        if m:
+            prefix, gene_idx, param_name = m.group(1), int(m.group(2)), m.group(3)
+            grouped.setdefault((prefix, param_name), {})[gene_idx] = value
+            continue
+
+        m = _GAT_LAYERS_FLAT_RE.match(key)
+        if m:
+            flat_idx, rest = int(m.group(1)), m.group(2)
+            i, j = divmod(flat_idx, num_networks)
+            new_state_dict[f'GATblock.GAT_layers.{i}.{j}.conv1.{rest}'] = value
+            continue
+
+        new_state_dict[key] = value
+
+    for (prefix, param_name), by_gene in grouped.items():
+        num_genes = len(by_gene)
+        stacked = torch.stack([by_gene[g] for g in range(num_genes)], dim=0)
+        new_state_dict[f'{prefix}.{param_name}'] = stacked
+
+    return new_state_dict
+
+
+NETWORKS = ['GRN_expanded', 'E3_expanded', 'phosphorylation_expanded', 'physical_ppi_expanded',
+            'genetic_interaction_expanded', 'DDRAM', 'STRING', 'PCNET']
+
+
+def load_network_edges(fi_dir):
+    '''Returns the edge_index tensors of NETWORKS, in NETWORKS order, on CPU.'''
+    return [torch.load(Path(fi_dir) / 'data' / 'networks' / f'{n}.pt', map_location='cpu') for n in NETWORKS]
+
+
+def production_hparams(network_edges, device):
+    '''MutationProjector keyword arguments that match pretrained_model.pth, with input_genes=[].'''
+    return dict(
+        num_genes=468, num_features=10, network_edges=network_edges, num_GATblock=2, num_heads=1,
+        dropout_p=0.1, cuda_device=device, output_sizes=[3, 10, 3], mask_percentage=0, input_genes=[],
+        d_ff=10, use_representative_embedding=1, ssl_task_index=0, use_special_token=1,
+        num_special_tokens=9, num_bins=list(np.append([5, 5], [2] * 7)), use_pooling=0,
+    )
+
+
+def load_eval_inputs(path_data):
+    '''
+    Reads mut.txt, cna.txt, cnd.txt and covariates.txt from path_data.
+    Returns (X_converted, X_special): mutation tokens (samples, genes) and covariates
+    (samples, special tokens, float64 as read by pandas).
+    '''
+    from nn_training_functions import merge_data, convert_mutations
+    path_data = Path(path_data)
+    mdf, cna, cnd = (pd.read_csv(path_data / f, sep='\t') for f in ('mut.txt', 'cna.txt', 'cnd.txt'))
+    X, _, _ = merge_data(mdf, cna, cnd, use_cancer_types=False)
+    covariates = pd.read_csv(path_data / 'covariates.txt', sep='\t')
+    return convert_mutations(X), torch.tensor(covariates.set_index('sample').values)
+
+
+def load_MutationProjector(device=0):
+    '''
+    device: defaults to 0 (legacy convention: CUDA device index 0), for backward compatibility.
+    Pass 'mps' (Apple Silicon GPU/unified memory), 'cpu', 'cuda:0', or a torch.device to target
+    a different backend.
+    '''
     # fi_dir
     fi_dir = Path().resolve().parent
     
@@ -36,11 +117,7 @@ def load_MutationProjector():
     
     # import network
     print(f'load networks, {time.ctime()}')
-    networks = 'GRN_expanded;E3_expanded;phosphorylation_expanded;physical_ppi_expanded;genetic_interaction_expanded;DDRAM;STRING;PCNET'.split(';')
-    network_edges = []
-    for n_idx, network in enumerate(networks):
-        edges = torch.load(f'{fi_dir}/data/networks/{network}.pt')
-        network_edges.append(edges)
+    network_edges = load_network_edges(fi_dir)
     print(f'finished loading networks, {time.ctime()}')
 
     # pretrained model
@@ -58,14 +135,14 @@ def load_MutationProjector():
     use_special_tokens=1
     num_bins=5
     epoch=100
-    cuda_device=0
+    cuda_device=device
     lr=0.001
     dropout_p=0.1
     num_heads=1
     mask_percentage=0
     batch_size = 64
-    weight_decay = 0.0001    
-    cuda_device=0
+    weight_decay = 0.0001
+    cuda_device=device
     lr=0.001
     dropout_p=0.1
     num_heads=1
@@ -83,9 +160,9 @@ def load_MutationProjector():
 
 
     ## load pretrained_model
-    tmp = torch.load(f'{fi_dir}/pretrained_model/pretrained_model.pth')
+    tmp = torch.load(f'{fi_dir}/pretrained_model/pretrained_model.pth', map_location='cpu')
     pretrained_model = MutationProjector(num_genes, num_features, network_edges, num_GATblock, num_heads, dropout_p, cuda_device, output_sizes, mask_percentage, input_genes, dff, use_representative_embedding=use_rep, ssl_task_index=0, use_special_token=use_special_tokens, num_special_tokens=num_special_tokens, num_bins=num_bins2, use_pooling=use_pooling)
-    pretrained_model.load_state_dict(tmp)
+    pretrained_model.load_state_dict(adapt_legacy_state_dict(pretrained_model, tmp))
     print('model loaded')
     
     return pretrained_model
