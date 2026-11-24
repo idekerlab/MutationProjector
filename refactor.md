@@ -109,8 +109,8 @@ against the actual shipped checkpoint:
   attention weights/edge indices matched exactly (max diff 0.0).
 - Cross-checked against the checked-in `prediction_results/test_sample/*.pt` reference
   embeddings (matches within 5e-6 for both old and new).
-- Timing on CPU: 1.74x-2.49x speedup.
-- Timing on one NVIDIA A30 GPU, with old and new code both on `cuda:0`: 52.4x (batch 64) and
+- Timed CPU runs: 1.74x to 2.49x speedup.
+- Timed runs on one NVIDIA A30 GPU, with old and new code both on `cuda:0`: 52.4x (batch 64) and
   52.0x (batch 256) for the forward pass, and 44.4x and 48.5x for a full train step.
 
 ## Test suite (`tests/`)
@@ -135,8 +135,8 @@ test_sample files tracked in the repo.
 | `test_end_to_end_checkpoint.py` *(slow)* | Real 468-gene checkpoint, real data |
 | `test_mp2_cohort.py` | MP2 cohort conversion, fixed bin edges, per-sample covariate padding. The slow test checks that Run B reproduces Run A on test_sample |
 
-Nothing outside `src/`, `tests/`, and `pytest.ini` was changed; `pretrained_model.pth` itself is
-untouched.
+Nothing outside `src/`, `tests/`, and `pytest.ini` was changed; `pretrained_model.pth` is
+unchanged.
 
 ## Device support: Apple Silicon (MPS) / CPU / CUDA
 
@@ -179,8 +179,7 @@ device-agnostic:
    ```
    This loads the real `pretrained_model.pth`, times both a forward-only pass and a full train
    step on each device (each with a warmup call first), and prints speedup ratios for both. It
-   also prints the actual device of the model's parameters as a check that the parameters are on MPS
-   and the run stayed on MPS. Pass `--skip-train-step` for a faster,
+   also prints the device of the model's parameters to confirm the run stayed on MPS. Pass `--skip-train-step` for a faster,
    forward-only run.
 3. **Confirm GPU utilization independently**: open Activity Monitor → Window → GPU History
    while the benchmark runs, or watch `sudo powermetrics --samplers gpu_power` in another

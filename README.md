@@ -2,7 +2,7 @@
 MutationProjector is a tumor mutation-based foundation model. It translates clinical gene panels into a representation of tumors and predicts cancer therapeutic response and metastasis. The model incorporates eight molecular interaction networks. 
 
 ## Overview of pre-training MutationProjector
-To pre-train MutationProjector, we used large-scale genomic alteration data, histopathology images and multiple molecular interaction networks. The figure below summarizes the approach:
+To pre-train MutationProjector, we used large-scale genomic alteration data, histopathology images and eight molecular interaction networks. The figure below summarizes the approach:
 ![Screenshot](./Figures/Figure1.jpg)
 
 ## Environment setup
