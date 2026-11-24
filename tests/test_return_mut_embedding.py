@@ -1,20 +1,11 @@
+"""Vectorized tokenizer.return_mut_embedding vs. the reference per-element loop."""
 import random
 
 import torch
 
 from nn_training_functions import tokenizer, convert_mutations
 from reference_impls import OldTokenizer
-
-
-def _build_pair(seed, num_genes, num_features, num_gene_features):
-    torch.manual_seed(seed)
-    tok_new = tokenizer(num_genes, num_features, cuda_device='cpu', num_gene_features=num_gene_features)
-    torch.manual_seed(seed)
-    tok_old = OldTokenizer(num_genes, num_features, cuda_device='cpu', num_gene_features=num_gene_features)
-    # same seed + same construction order -> identical embedding weights for a fair comparison
-    assert torch.equal(tok_new.mut_embedding.weight, tok_old.mut_embedding.weight)
-    assert torch.equal(tok_new.gene_embedding.weight, tok_old.gene_embedding.weight)
-    return tok_new, tok_old
+from conftest import seeded_pair
 
 
 def test_matches_reference_loop_no_masking():
@@ -25,7 +16,7 @@ def test_matches_reference_loop_no_masking():
         num_gene_features = 3
         B = rng.randint(1, 6)
 
-        tok_new, tok_old = _build_pair(trial, num_genes, num_features, num_gene_features)
+        tok_new, tok_old = seeded_pair(trial, tokenizer, OldTokenizer, num_genes, num_features, cuda_device='cpu', num_gene_features=num_gene_features)
 
         X_raw = torch.randint(0, 2, (B, num_genes, num_gene_features))
         X_converted = convert_mutations(X_raw)
@@ -49,7 +40,7 @@ def test_matches_reference_loop_with_explicit_masking():
         num_masked = rng.randint(0, num_genes)
         positions_to_mask = sorted(rng.sample(range(num_genes), num_masked))
 
-        tok_new, tok_old = _build_pair(trial, num_genes, num_features, num_gene_features)
+        tok_new, tok_old = seeded_pair(trial, tokenizer, OldTokenizer, num_genes, num_features, cuda_device='cpu', num_gene_features=num_gene_features)
 
         X_raw = torch.randint(0, 2, (B, num_genes, num_gene_features))
         X_converted = convert_mutations(X_raw)
@@ -63,7 +54,7 @@ def test_matches_reference_loop_with_explicit_masking():
 
 def test_all_genes_masked_edge_case():
     num_genes, num_features, num_gene_features, B = 6, 3, 3, 4
-    tok_new, tok_old = _build_pair(0, num_genes, num_features, num_gene_features)
+    tok_new, tok_old = seeded_pair(0, tokenizer, OldTokenizer, num_genes, num_features, cuda_device='cpu', num_gene_features=num_gene_features)
     X_raw = torch.randint(0, 2, (B, num_genes, num_gene_features))
     X_converted = convert_mutations(X_raw)
     positions_to_mask = list(range(num_genes))

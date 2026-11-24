@@ -36,12 +36,10 @@ import sys
 import time
 from pathlib import Path
 
-import pandas as pd
 import torch
 
-from load_model import adapt_legacy_state_dict
+from load_model import adapt_legacy_state_dict, load_eval_inputs, load_network_edges, production_hparams
 from MutationProjector_nn import MutationProjector as NewMutationProjector
-from nn_training_functions import merge_data, convert_mutations
 from device_utils import to_device_safe
 
 FI_DIR = Path(__file__).resolve().parents[1]
@@ -101,16 +99,6 @@ def time_train_step(model, X_converted, X_special, device, n_repeats=5):
     return (time.time() - t0) / n_repeats
 
 
-def _production_hparams(network_edges, device):
-    import numpy as np
-    return dict(
-        num_genes=468, num_features=10, network_edges=network_edges, num_GATblock=2, num_heads=1,
-        dropout_p=0.1, cuda_device=device, output_sizes=[3, 10, 3], mask_percentage=0, input_genes=[],
-        d_ff=10, use_representative_embedding=1, ssl_task_index=0, use_special_token=1,
-        num_special_tokens=9, num_bins=list(np.append([5, 5], [2] * 7)), use_pooling=0,
-    )
-
-
 def benchmark_old_baseline(network_edges, checkpoint, X_converted, X_special, n_repeats, include_train_step):
     from reference_impls import OldMutationProjector
 
@@ -122,7 +110,7 @@ def benchmark_old_baseline(network_edges, checkpoint, X_converted, X_special, n_
     torch.nn.Module.cuda = lambda self, *a, **kw: self
     try:
         print("\n=== old (pre-refactor) code, cpu, via .cuda()-shim ===")
-        hp = _production_hparams(network_edges, device=0)  # old code only understands int cuda indices
+        hp = production_hparams(network_edges, device=0)  # old code only understands int cuda indices
         results = {}
 
         model = OldMutationProjector(**hp)
@@ -154,7 +142,7 @@ def benchmark_new(network_edges, checkpoint, X_converted, X_special, device_str,
         return None
 
     print(f"\n=== new (refactored) code, device: {device_str} ===")
-    hp = _production_hparams(network_edges, device=device_str)
+    hp = production_hparams(network_edges, device=device_str)
     X_converted_dev = X_converted.to(device)
     X_special_dev = to_device_safe(X_special, device)
     results = {}
@@ -196,18 +184,9 @@ def main():
     args = parser.parse_args()
     include_train_step = not args.skip_train_step
 
-    networks = 'GRN_expanded;E3_expanded;phosphorylation_expanded;physical_ppi_expanded;genetic_interaction_expanded;DDRAM;STRING;PCNET'.split(';')
-    network_edges = [torch.load(FI_DIR / 'data' / 'networks' / f'{n}.pt', map_location='cpu') for n in networks]
+    network_edges = load_network_edges(FI_DIR)
     checkpoint = torch.load(FI_DIR / 'pretrained_model' / 'pretrained_model.pth', map_location='cpu')
-
-    path_data = FI_DIR / 'data' / 'downstream_data' / args.dataset_dir
-    mdf = pd.read_csv(path_data / 'mut.txt', sep='\t')
-    cna = pd.read_csv(path_data / 'cna.txt', sep='\t')
-    cnd = pd.read_csv(path_data / 'cnd.txt', sep='\t')
-    X_test, _, _ = merge_data(mdf, cna, cnd, use_cancer_types=False)
-    covariates = pd.read_csv(path_data / 'covariates.txt', sep='\t')
-    X_special_full = torch.tensor(covariates.set_index('sample').values)
-    X_converted_full = convert_mutations(X_test)
+    X_converted_full, X_special_full = load_eval_inputs(FI_DIR / 'data' / 'downstream_data' / args.dataset_dir)
 
     # tile the (small, 20-sample) shipped test set up to --batch-size for a more realistic load
     reps = (args.batch_size + X_converted_full.shape[0] - 1) // X_converted_full.shape[0]

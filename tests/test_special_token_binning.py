@@ -1,24 +1,10 @@
-"""
-Item 5: new (torch.bucketize) vs. old (pandas.cut) binning inside tokenize_special_tokens.
-pd.cut(bins=int) computes adaptive, batch-dependent bin edges (min/max of the values passed
-in *this* call, widened by 0.1% of the range, right-closed intervals) -- this is the one
-refactor step where equivalence isn't structurally obvious, so it gets the widest randomized
-corpus of any test in this suite, including deliberately-adversarial exact-boundary values.
-"""
+"""torch.bucketize binning in tokenize_special_tokens vs. pd.cut, which sets bin edges from each batch's min and max."""
 import numpy as np
 import torch
 
 from nn_training_functions import tokenize_special_tokens
 from reference_impls import OldTokenizeSpecialTokens
-
-
-def _make_pair(num_features, num_bins, seed):
-    torch.manual_seed(seed)
-    new = tokenize_special_tokens(num_features, num_bins, cuda_device='cpu')
-    torch.manual_seed(seed)
-    old = OldTokenizeSpecialTokens(num_features, num_bins, cuda_device='cpu')
-    assert torch.equal(new.token_emb.weight, old.token_emb.weight)
-    return new, old
+from conftest import seeded_pair
 
 
 def _values(kind, n, rng):
@@ -47,7 +33,7 @@ def test_matches_pandas_cut_across_input_kinds_and_types():
         input_type = rng.choice(['list', 'ndarray', 'tensor'])
         values = arr.tolist() if input_type == 'list' else (arr if input_type == 'ndarray' else torch.tensor(arr))
 
-        new, old = _make_pair(num_features, num_bins, seed=trial)
+        new, old = seeded_pair(trial, tokenize_special_tokens, OldTokenizeSpecialTokens, num_features, num_bins, cuda_device='cpu')
         new.eval(); old.eval()
         with torch.no_grad():
             out_new = new(values, apply_padding=False)
@@ -69,7 +55,7 @@ def test_matches_pandas_cut_at_exact_bin_boundaries():
         edges = np.linspace(mn, mx, num_bins + 1)
         vals = np.concatenate([edges, rng.uniform(mn, mx, 10)])
 
-        new, old = _make_pair(num_features=3, num_bins=num_bins, seed=trial)
+        new, old = seeded_pair(trial, tokenize_special_tokens, OldTokenizeSpecialTokens, 3, num_bins, cuda_device='cpu')
         with torch.no_grad():
             out_new = new(vals, apply_padding=False)
             out_old = old(vals, apply_padding=False)

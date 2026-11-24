@@ -1,28 +1,20 @@
-"""
-Items 3+4: old (PyG Data/DataLoader-based, pandas GATidx lookup) vs. new (2D-indexed
-GAT_layers, cached block-diagonal offset edge_index) GATv2block, with identical weights.
-"""
+"""Old vs. new GATv2block (2D-indexed GAT_layers, cached block-diagonal edge_index) with identical weights."""
+from types import SimpleNamespace
+
 import torch
 
 from GATv2_functions import GATv2block as NewGATv2block
 from reference_impls import OldGATv2block
 from compute_attention import compute_attention
 from conftest import make_network_edges
+from load_model import adapt_legacy_state_dict
 
 
-def copy_weights(old, new, num_GATblock, num_networks):
-    for i in range(num_GATblock):
-        for j in range(num_networks):
-            idx = i * num_networks + j
-            new.GAT_layers[i][j].load_state_dict(old.GAT_layers[idx].state_dict())
-    new.linear_layers.weight.data.copy_(torch.stack([old.linear_layers[g].weight for g in range(old.num_genes)]))
-    new.linear_layers.bias.data.copy_(torch.stack([old.linear_layers[g].bias for g in range(old.num_genes)]))
-    new.FF_layer1.weight.data.copy_(torch.stack([old.FF_layer1[g].weight for g in range(old.num_genes)]))
-    new.FF_layer1.bias.data.copy_(torch.stack([old.FF_layer1[g].bias for g in range(old.num_genes)]))
-    new.FF_layer2.weight.data.copy_(torch.stack([old.FF_layer2[g].weight for g in range(old.num_genes)]))
-    new.FF_layer2.bias.data.copy_(torch.stack([old.FF_layer2[g].bias for g in range(old.num_genes)]))
-    new.layer_norm1.load_state_dict(old.layer_norm1.state_dict())
-    new.layer_norm2.load_state_dict(old.layer_norm2.state_dict())
+def copy_weights(old, new):
+    """Moves old block weights into new through adapt_legacy_state_dict, which expects GATblock.* keys."""
+    legacy = {f'GATblock.{k}': v for k, v in old.state_dict().items()}
+    adapted = adapt_legacy_state_dict(SimpleNamespace(GATblock=new), legacy)
+    new.load_state_dict({k.removeprefix('GATblock.'): v for k, v in adapted.items()}, strict=True)
 
 
 CASES = [
@@ -40,7 +32,7 @@ def _run_case(num_genes, num_features, num_networks, num_GATblock, batch_size, n
 
     old = OldGATv2block(num_genes, num_features, network_edges, num_GATblock, num_heads, dropout_p=0.0, cuda_device='cpu', d_ff=7, self_loop=False)
     new = NewGATv2block(num_genes, num_features, network_edges, num_GATblock, num_heads, dropout_p=0.0, cuda_device='cpu', d_ff=7, self_loop=False)
-    copy_weights(old, new, num_GATblock, num_networks)
+    copy_weights(old, new)
     old.eval(); new.eval()
 
     X_input = torch.randn(batch_size, num_genes, num_features)

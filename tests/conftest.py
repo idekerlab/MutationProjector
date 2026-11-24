@@ -7,13 +7,7 @@ import torch
 
 @pytest.fixture(autouse=True)
 def force_cpu(monkeypatch):
-    """
-    Production code hardcodes `.cuda(self.cuda_device)` throughout (GATv2block,
-    MutationProjector, tokenizer, tokenize_special_tokens, ...). CI/dev machines running this
-    suite may have no GPU at all, and `.cuda()` raises unconditionally in that case. Monkeypatch
-    it to a no-op for the duration of each test so the exact same production code paths run on
-    CPU tensors -- this changes nothing about *what* is computed, only *where*.
-    """
+    """tests/reference_impls.py calls .cuda() everywhere. Make it a no-op so the old code runs on CPU."""
     monkeypatch.setattr(torch.Tensor, "cuda", lambda self, *a, **kw: self)
     monkeypatch.setattr(torch.nn.Module, "cuda", lambda self, *a, **kw: self)
 
@@ -27,8 +21,6 @@ def seeded_rng():
 
 @pytest.fixture
 def tiny_model_config():
-    """Small synthetic dims so structural/equivalence tests run in milliseconds without the
-    real 468-gene checkpoint."""
     return dict(
         num_genes=9,
         num_features=4,
@@ -43,6 +35,29 @@ def tiny_model_config():
         cuda_device='cpu',
         dropout_p=0.0,
     )
+
+
+def tiny_model_kwargs(cfg, network_edges, **overrides):
+    """MutationProjector keyword arguments for tiny_model_config. Overrides replace defaults."""
+    kwargs = dict(
+        num_genes=cfg['num_genes'], num_features=cfg['num_features'], network_edges=network_edges,
+        num_GATblock=cfg['num_GATblock'], num_heads=cfg['num_heads'], dropout_p=cfg['dropout_p'],
+        cuda_device=cfg['cuda_device'], output_sizes=cfg['output_sizes'], mask_percentage=0, input_genes=[],
+        d_ff=cfg['d_ff'], ssl_task_index=cfg['ssl_task_index'], use_representative_embedding=True,
+        use_special_token=True, num_special_tokens=cfg['num_special_tokens'], num_bins=cfg['num_bins'],
+        use_pooling=True,
+    )
+    kwargs.update(overrides)
+    return kwargs
+
+
+def seeded_pair(seed, new_cls, old_cls, *args, **kwargs):
+    """Builds new_cls and old_cls from the same seed, so both get the same initial weights."""
+    torch.manual_seed(seed)
+    new = new_cls(*args, **kwargs)
+    torch.manual_seed(seed)
+    old = old_cls(*args, **kwargs)
+    return new, old
 
 
 def make_network_edges(num_genes, num_networks, generator=None):

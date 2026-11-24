@@ -69,6 +69,39 @@ def adapt_legacy_state_dict(model, legacy_state_dict):
     return new_state_dict
 
 
+NETWORKS = ['GRN_expanded', 'E3_expanded', 'phosphorylation_expanded', 'physical_ppi_expanded',
+            'genetic_interaction_expanded', 'DDRAM', 'STRING', 'PCNET']
+
+
+def load_network_edges(fi_dir):
+    '''Returns the edge_index tensors of NETWORKS, in NETWORKS order, on CPU.'''
+    return [torch.load(Path(fi_dir) / 'data' / 'networks' / f'{n}.pt', map_location='cpu') for n in NETWORKS]
+
+
+def production_hparams(network_edges, device):
+    '''MutationProjector keyword arguments that match pretrained_model.pth, with input_genes=[].'''
+    return dict(
+        num_genes=468, num_features=10, network_edges=network_edges, num_GATblock=2, num_heads=1,
+        dropout_p=0.1, cuda_device=device, output_sizes=[3, 10, 3], mask_percentage=0, input_genes=[],
+        d_ff=10, use_representative_embedding=1, ssl_task_index=0, use_special_token=1,
+        num_special_tokens=9, num_bins=list(np.append([5, 5], [2] * 7)), use_pooling=0,
+    )
+
+
+def load_eval_inputs(path_data):
+    '''
+    Reads mut.txt, cna.txt, cnd.txt and covariates.txt from path_data.
+    Returns (X_converted, X_special): mutation tokens (samples, genes) and covariates
+    (samples, special tokens, float64 as read by pandas).
+    '''
+    from nn_training_functions import merge_data, convert_mutations
+    path_data = Path(path_data)
+    mdf, cna, cnd = (pd.read_csv(path_data / f, sep='\t') for f in ('mut.txt', 'cna.txt', 'cnd.txt'))
+    X, _, _ = merge_data(mdf, cna, cnd, use_cancer_types=False)
+    covariates = pd.read_csv(path_data / 'covariates.txt', sep='\t')
+    return convert_mutations(X), torch.tensor(covariates.set_index('sample').values)
+
+
 def load_MutationProjector(device=0):
     '''
     device: defaults to 0 (legacy convention: CUDA device index 0), for backward compatibility.
@@ -84,11 +117,7 @@ def load_MutationProjector(device=0):
     
     # import network
     print(f'load networks, {time.ctime()}')
-    networks = 'GRN_expanded;E3_expanded;phosphorylation_expanded;physical_ppi_expanded;genetic_interaction_expanded;DDRAM;STRING;PCNET'.split(';')
-    network_edges = []
-    for n_idx, network in enumerate(networks):
-        edges = torch.load(f'{fi_dir}/data/networks/{network}.pt', map_location='cpu')
-        network_edges.append(edges)
+    network_edges = load_network_edges(fi_dir)
     print(f'finished loading networks, {time.ctime()}')
 
     # pretrained model
