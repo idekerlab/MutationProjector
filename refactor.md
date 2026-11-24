@@ -3,7 +3,7 @@
 ## Context
 
 `MutationProjector`'s GATv2 graph encoder (`src/GATv2_functions.py`) and tokenizer
-(`src/nn_training_functions.py`) were slow because of per-gene Python loops calling hundreds of individual
+(`src/nn_training_functions.py`) were slow because of per-gene Python loops calling up to 468 individual
 `nn.Linear` modules, PyG `Data`/`DataLoader` objects rebuilt from scratch on every forward call
 despite static graph topology, a pandas `.loc` lookup and a `pd.cut` round-trip sitting inside
 hot loops, and pure-Python per-element loops in mutation tokenization. One unrelated correctness
@@ -65,9 +65,9 @@ submodule. We left this unchanged, because fixing it changes numeric output for 
 for a no-semantic-change refactor. It's documented in code and pinned by a characterization test
 (see below) so a future change can't silently alter this behavior.
 
-Note found during testing: because `num_embeddings=1` and `padding_idx=0`, PyTorch always zeroes
-that single embedding row regardless of random seed. So this bug produces a padding embedding that stays at
-zero and never trains.
+During testing we found that PyTorch always zeroes the single embedding row (`num_embeddings=1`,
+`padding_idx=0`) for any random seed. The padding embedding therefore stays at zero and receives
+no training.
 
 ### 7. Removed confirmed-redundant `.cuda()` calls
 Commit 7388522 removed a net 10 `.cuda()` calls (9 in `MutationProjector_nn.py`, 1 in
@@ -88,16 +88,16 @@ Replaced with `BatchedPerGeneLinear` (`src/GATv2_functions.py`): a single `nn.Pa
 
 The checkpoint adapter handles the legacy keys. The shipped checkpoint stores individual per-gene keys
 (`GATblock.linear_layers.0.weight ... .467.weight`, etc.) and a flat `GAT_layers` indexed
-`i*num_networks+j`, not the new shapes. `adapt_legacy_state_dict` (`src/load_model.py`) detects
+`i*num_networks+j`. These differ from the new shapes. `adapt_legacy_state_dict` (`src/load_model.py`) detects
 these legacy key patterns via regex, stacks per-gene weights into the new tensor shape, and
-re-nests `GAT_layers` keys. It passes everything else through unchanged. The adapter never modifies
-the checkpoint file. It translates the keys only at load time. `src/load_model.py` and
+re-nests `GAT_layers` keys. It passes everything else through unchanged. The adapter translates the keys at
+load time and leaves the checkpoint file unchanged. `src/load_model.py` and
 `src/generate_embeddings.py`'s load sites now route through this adapter instead of calling
 `load_state_dict` directly.
 
 ## Verification
 
-We checked everything against frozen pre-refactor reference implementations
+We compared each changed component and the full model with frozen pre-refactor reference implementations
 (`tests/reference_impls.py`) with randomized equivalence tests, plus a real end-to-end run
 against the actual shipped checkpoint:
 
@@ -164,7 +164,7 @@ device-agnostic:
 
 ### Testing the speedup on Apple Silicon (M-series GPU / unified memory)
 
-1. **Environment** (native `uv` venv. `conda-envs/env.yml` pins CUDA and does not apply on macOS):
+1. **Environment** (native `uv` venv: `conda-envs/env.yml` pins CUDA, so it cannot be used on macOS):
    ```
    uv venv .venv && source .venv/bin/activate
    uv pip install torch  # macOS wheels include MPS support out of the box
