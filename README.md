@@ -1,12 +1,12 @@
 # MutationProjector
-MutationProjector is a neural network that translates clinical gene panels into a foundational representation of tumors. This is a tumor mutation-based foundation model capable of predicting cancer therapeutic response and metastasis, in which multiple types of molecular interaction networks were incorporated into the model. 
+MutationProjector is a neural network that translates clinical gene panels into a foundational representation of tumors. This is a tumor mutation-based foundation model that predicts cancer therapeutic response and metastasis. The model incorporates multiple molecular interaction networks. 
 
 ## :compass: Overview of pre-training MutationProjector
-To pre-train MutationProjector, we leveraged large-scale genomic alteration data, histopathology images and multiple molecular interaction networks. Simplified overview of the approach is visualized below:
+To pre-train MutationProjector, we used large-scale genomic alteration data, histopathology images and multiple molecular interaction networks. Simplified overview of the approach is visualized below:
 ![Screenshot](./Figures/Figure1.jpg)
 
 ## :rocket: Environment set up
-MutationProjector require the following environmental setup:
+MutationProjector requires the following environment:
 - GPU server with CUDA>=11 installed
 - Python >= 3.6
 - Anaconda: [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
@@ -30,7 +30,7 @@ All of the networks used in this study are available on NDEx (Network Data Excha
 
 
 ## :file_folder: Required input files for downstream tasks
-Make sure to create a folder under `/data/downstream_data/train_dataset` and/or `/data/downstream_data/eval_dataset`, dependeing on your task requirements.
+Make sure to create a folder under `/data/downstream_data/train_dataset` and/or `/data/downstream_data/eval_dataset`, depending on your task.
 Also, make sure that you have all the tab-delimited files under the folder created above. 
 1. *mut.txt*
 2. *cna.txt*
@@ -43,7 +43,7 @@ For `outcomes.txt` file, include two columns, `sample` and `outcomes` (if trying
 Example files are under `./data/downstream_data/train_dataset/sample` and `./data/downstream_data/eval_dataset/test_sample` folders (note that these are synthetic data).
 
 
-### :gear: Codes for generating the input files for TMB, aneuploidy and mutational signatures
+### :gear: Code for generating the input files for TMB, aneuploidy and mutational signatures
 All codes related to generating the input files for TMB and mutational signatures are available under `./src` folder.
 For generating aneuploidy, please use [ASCETS](https://github.com/beroukhim-lab/ascets)
 1. *calculate_TMB.R* : calculates TMB from MAF (Mutation Annotation Format) files using [Maftools](https://www.bioconductor.org/packages/release/bioc/html/maftools.html)
@@ -88,20 +88,20 @@ List of indices for missing values in the covariates (optional).
 
 
 #### 3. Output files 
-- Predicted probabilities for each tumor samples  
+- Predicted probability for each tumor sample  
 - Output file available at:  
 `/prediction_results/{your_dataset_name}/TransferLearning_predictions.txt`
 
 
 
 ### :fire: (B) Transfer learning on your own downstream tasks
-To make predictions for the task of your interest using the pre-trained MutationProjector, execute the following:
+To make predictions for your task using the pre-trained MutationProjector, execute the following:
 #### 1. Prepare train and test datasets
 Make sure you have all the *mut.txt*, *cna.txt*, *cnd.txt*, *covariates.txt* and *outcomes.txt* files under `/data/downstream_data/train_dataset/{your_dataset_name}` and `/data/downstream_data/eval_dataset/{your_dataset_name}`  
 (please change {your_dataset_name} to the desired name)
 
 
-#### 2. Run the model in a GPU server by execute the following in the `/src/` folder:  
+#### 2. Run the model in a GPU server by executing the following in the `/src/` folder:  
 ```bash
 python predict.py 
 		   -downstream_train 
@@ -124,7 +124,7 @@ List of indices for missing values in the covariates (optional).
 
 
 #### 3. Output files 
-- Predicted probabilities for each tumor samples  
+- Predicted probability for each tumor sample  
 - Output file available at:  
 `/prediction_results/{your_dataset_name}/TransferLearning_predictions.txt`
 
