@@ -5,7 +5,7 @@
 `MutationProjector`'s GATv2 graph encoder (`src/GATv2_functions.py`) and tokenizer
 (`src/nn_training_functions.py`) were slow because of per-gene Python loops calling up to 468 individual
 `nn.Linear` modules, PyG `Data`/`DataLoader` objects rebuilt from scratch on every forward call
-despite static graph topology, a pandas `.loc` lookup and a `pd.cut` round-trip sitting inside
+despite static graph topology, a pandas `.loc` lookup and a `pd.cut` round-trip inside
 hot loops, and pure-Python per-element loops in mutation tokenization. During the refactor we found
 one unrelated correctness bug: a padding path re-creates an untrained `nn.Embedding` on every call.
 
@@ -165,7 +165,7 @@ device-agnostic:
 
 ### Testing the speedup on Apple Silicon (M-series GPU / unified memory)
 
-1. **Environment** (native `uv` venv: `conda-envs/env.yml` pins CUDA, so it cannot be used on macOS):
+1. **Environment** (native `uv` venv: `conda-envs/env.yml` pins CUDA, so it fails on macOS):
    ```
    uv venv .venv && source .venv/bin/activate
    uv pip install torch  # macOS wheels include MPS support out of the box
@@ -180,7 +180,7 @@ device-agnostic:
    This loads the real `pretrained_model.pth`, times both a forward-only pass and a full train
    step on each device (each with a warmup call first), and prints speedup ratios for both. It
    also prints the actual device of the model's parameters as a check that the parameters are on MPS
-   and the run did not fall back to CPU. Pass `--skip-train-step` for a faster,
+   and the run stayed on MPS. Pass `--skip-train-step` for a faster,
    forward-only run.
 3. **Confirm GPU utilization independently**: open Activity Monitor → Window → GPU History
    while the benchmark runs, or watch `sudo powermetrics --samplers gpu_power` in another
